@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getChoiceFeed, type ChoiceFeed } from '@/entities/choice';
 import { ProfileCard, ProfileDetail } from '@/entities/profile';
-import { api } from '@/shared/api';
+import {
+  reshuffleFeed,
+  RESHUFFLE_LIMIT,
+} from '@/features/profile/profile-reshuffle';
+import { selectProfile, SELECT_THRESHOLD } from '@/features/profile/profile-select';
+import { skipQuestion } from '@/features/question/question-skip';
 // TODO: 전용 refresh/chevrons-right 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
 import {
   IcHome24 as ChevronsRightIcon,
   IcHome24 as RefreshIcon,
 } from '@/shared/ui/icons';
 import { BottomNav } from './BottomNav';
-
-// 한 라운드(질문)당 다시 섞기 가능 횟수.
-const RESHUFFLE_LIMIT = 3;
 
 export function ChoiceScreen() {
   const [feed, setFeed] = useState<ChoiceFeed | null>(null);
@@ -26,18 +28,21 @@ export function ChoiceScreen() {
 
   // setState는 모두 await 이후에 (마운트 effect에서 동기 setState 경고 방지).
   // 로딩 표시가 필요한 호출부(버튼)는 직접 setLoading(true) 후 호출한다.
-  const loadFeed = useCallback(async (questionId?: string) => {
-    const { data, error } = await getChoiceFeed(questionId);
-    setExpandedId(null);
-    if (error || !data) {
-      setFailed(true);
-    } else {
-      setFeed(data);
-      setRound((r) => r + 1);
-      setFailed(false);
-    }
-    setLoading(false);
-  }, []);
+  const loadFeed = useCallback(
+    async (fetchFeed: () => ReturnType<typeof getChoiceFeed>) => {
+      const { data, error } = await fetchFeed();
+      setExpandedId(null);
+      if (error || !data) {
+        setFailed(true);
+      } else {
+        setFeed(data);
+        setRound((r) => r + 1);
+        setFailed(false);
+      }
+      setLoading(false);
+    },
+    [],
+  );
 
   // 마운트 시 첫 피드 로드. setState는 await 이후(비동기)라 effect 동기 setState 규칙을 지킨다.
   useEffect(() => {
@@ -64,16 +69,14 @@ export function ChoiceScreen() {
       if (!feed) return;
       setLoading(true);
       setExpandedId(null);
-      const { data } = await api.POST('/choices/select', {
-        body: { questionId: feed.question.id, selectedUserId },
-      });
+      const { data } = await selectProfile(feed.question.id, selectedUserId);
       if (data) {
         setFeed(data);
         setRound((r) => r + 1);
         setReshuffleLeft(RESHUFFLE_LIMIT);
         setLoading(false);
       } else {
-        void loadFeed();
+        void loadFeed(getChoiceFeed);
       }
     },
     [feed, loadFeed],
@@ -84,14 +87,14 @@ export function ChoiceScreen() {
     if (!feed || reshuffleLeft <= 0) return;
     setLoading(true);
     setReshuffleLeft((n) => n - 1);
-    void loadFeed(feed.question.id);
+    void loadFeed(() => reshuffleFeed(feed.question.id));
   }, [feed, reshuffleLeft, loadFeed]);
 
   // 스킵 → 새 질문 + 새 카드 4명.
   const handleSkip = useCallback(() => {
     setLoading(true);
     setReshuffleLeft(RESHUFFLE_LIMIT);
-    void loadFeed();
+    void loadFeed(skipQuestion);
   }, [loadFeed]);
 
   const expanded = feed?.candidates.find((c) => c.id === expandedId) ?? null;
@@ -121,7 +124,7 @@ export function ChoiceScreen() {
             실행했는지 확인하세요.
             <button
               type="button"
-              onClick={() => void loadFeed()}
+              onClick={() => void loadFeed(getChoiceFeed)}
               className="mt-3 block w-full rounded-lg bg-white/15 py-2"
             >
               다시 시도
@@ -139,6 +142,7 @@ export function ChoiceScreen() {
                 key={`${round}-${profile.id}`}
                 profile={profile}
                 disabled={loading}
+                selectThreshold={SELECT_THRESHOLD}
                 onSelect={() => void handleSelect(profile.id)}
                 onExpand={() => setExpandedId(profile.id)}
               />

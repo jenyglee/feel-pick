@@ -5,17 +5,17 @@ import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { IcHome24 as InfoIcon } from '@/shared/ui/icons';
 import type { Profile } from '../model/profile';
 
-// 오른쪽으로 이만큼 이상 끌면 "선택"으로 간주.
-const SELECT_THRESHOLD = 120;
-
 export function ProfileCard({
   profile,
   disabled,
+  selectThreshold,
   onSelect,
   onExpand,
 }: {
   profile: Profile;
   disabled?: boolean;
+  // 오른쪽으로 이만큼(px) 이상 끌면 "선택"으로 간주. 선택 기능(feature)이 값을 소유.
+  selectThreshold: number;
   onSelect: () => void;
   onExpand: () => void;
 }) {
@@ -31,7 +31,7 @@ export function ProfileCard({
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={{ left: 0.1, right: 0.9 }}
       onDragEnd={(_, info) => {
-        if (info.offset.x > SELECT_THRESHOLD) {
+        if (info.offset.x > selectThreshold) {
           // 오른쪽으로 날려보내고 선택 완료.
           void animate(x, 500, { duration: 0.35, ease: 'easeOut' });
           onSelect();
