@@ -14,7 +14,7 @@ import {
   IcHome24 as ChevronsRightIcon,
   IcHome24 as RefreshIcon,
 } from '@/shared/ui/icons';
-import { BottomNav } from './BottomNav';
+import { BottomNav } from '@/widgets/bottom-nav';
 
 export function ChoiceScreen() {
   const [feed, setFeed] = useState<ChoiceFeed | null>(null);
