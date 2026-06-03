@@ -2,7 +2,8 @@
 
 import type { Schemas } from '@feel-pick/api-types';
 import { motion } from 'motion/react';
-import { MapPinIcon } from './icons';
+// TODO: 전용 map-pin 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
+import { IcHome24 as MapPinIcon } from '@/lib/ui/icons';
 
 type Profile = Schemas['Profile'];
 

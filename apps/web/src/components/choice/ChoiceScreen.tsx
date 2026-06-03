@@ -4,7 +4,12 @@ import type { Schemas } from '@feel-pick/api-types';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { BottomNav } from './BottomNav';
-import { BellIcon, ChevronsRightIcon, RefreshIcon } from './icons';
+// TODO: 전용 bell/refresh/chevrons-right 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
+import {
+  IcHome24 as BellIcon,
+  IcHome24 as ChevronsRightIcon,
+  IcHome24 as RefreshIcon,
+} from '@/lib/ui/icons';
 import { ProfileCard } from './ProfileCard';
 import { ProfileDetail } from './ProfileDetail';
 
@@ -95,8 +100,7 @@ export function ChoiceScreen() {
     void loadFeed();
   }, [loadFeed]);
 
-  const expanded =
-    feed?.candidates.find((c) => c.id === expandedId) ?? null;
+  const expanded = feed?.candidates.find((c) => c.id === expandedId) ?? null;
 
   return (
     <div
@@ -108,20 +112,9 @@ export function ChoiceScreen() {
     >
       {/* 헤더: 알림 + 질문 + 진행 표시 */}
       <header className="px-5 pt-6">
-        <div className="flex justify-end">
-          <BellIcon className="size-6 text-white/90" />
-        </div>
         <h1 className="text-title1 mt-1 text-center text-white">
           {feed?.question.text ?? ' '}
         </h1>
-        <div className="mt-3 flex items-center justify-center gap-1.5">
-          <span className="block h-1.5 w-9 overflow-hidden rounded-full bg-white/40">
-            <span className="block h-full w-1/2 rounded-full bg-white" />
-          </span>
-          <span className="grid size-4 place-items-center rounded-full bg-yellow-400 text-[9px] font-bold text-black">
-            P
-          </span>
-        </div>
       </header>
 
       {/* 본문: 카드 그리드 또는 상세 */}
