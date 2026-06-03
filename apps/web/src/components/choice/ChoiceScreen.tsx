@@ -1,24 +1,21 @@
 'use client';
 
-import type { Schemas } from '@feel-pick/api-types';
 import { useCallback, useEffect, useState } from 'react';
+import { getChoiceFeed, type ChoiceFeed } from '@/entities/choice';
+import { ProfileCard, ProfileDetail } from '@/entities/profile';
 import { api } from '@/shared/api';
-import { BottomNav } from './BottomNav';
 // TODO: 전용 refresh/chevrons-right 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
 import {
   IcHome24 as ChevronsRightIcon,
   IcHome24 as RefreshIcon,
 } from '@/shared/ui/icons';
-import { ProfileCard } from './ProfileCard';
-import { ProfileDetail } from './ProfileDetail';
-
-type Feed = Schemas['ChoiceFeed'];
+import { BottomNav } from './BottomNav';
 
 // 한 라운드(질문)당 다시 섞기 가능 횟수.
 const RESHUFFLE_LIMIT = 3;
 
 export function ChoiceScreen() {
-  const [feed, setFeed] = useState<Feed | null>(null);
+  const [feed, setFeed] = useState<ChoiceFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -30,9 +27,7 @@ export function ChoiceScreen() {
   // setState는 모두 await 이후에 (마운트 effect에서 동기 setState 경고 방지).
   // 로딩 표시가 필요한 호출부(버튼)는 직접 setLoading(true) 후 호출한다.
   const loadFeed = useCallback(async (questionId?: string) => {
-    const { data, error } = questionId
-      ? await api.GET('/choices', { params: { query: { questionId } } })
-      : await api.GET('/choices');
+    const { data, error } = await getChoiceFeed(questionId);
     setExpandedId(null);
     if (error || !data) {
       setFailed(true);
@@ -48,7 +43,7 @@ export function ChoiceScreen() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const { data, error } = await api.GET('/choices');
+      const { data, error } = await getChoiceFeed();
       if (!active) return;
       if (error || !data) {
         setFailed(true);

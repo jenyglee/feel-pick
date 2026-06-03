@@ -1,11 +1,9 @@
 'use client';
 
-import type { Schemas } from '@feel-pick/api-types';
 import { motion } from 'motion/react';
 // TODO: 전용 map-pin 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
 import { IcHome24 as MapPinIcon } from '@/shared/ui/icons';
-
-type Profile = Schemas['Profile'];
+import type { Profile } from '../model/profile';
 
 // 카드를 탭했을 때 확대되어 상세 정보를 보여주는 뷰.
 export function ProfileDetail({
