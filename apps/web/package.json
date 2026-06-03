@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "icons": "svgr --config-file svgr.config.cjs --out-dir src/lib/ui/icons public/icons",
+    "icons": "svgr --config-file svgr.config.cjs --out-dir src/shared/ui/icons public/icons",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint"

@@ -18,7 +18,7 @@
 ## 적용 경로
 
 - `./index.ts` → `localFont({ ... variable: "--font-nanum-square-neo" })` 로 `nanumSquareNeo` export
-- `layout.tsx` → `import { nanumSquareNeo } from "@/lib/fonts"` 후 `<html>`에 주입
+- `layout.tsx` → `import { nanumSquareNeo } from "@/shared/config/fonts"` 후 `<html>`에 주입
 - `globals.css` → `--font-display` 맨 앞이 `var(--font-nanum-square-neo)` → `font-display` 유틸/`body`에 적용
 
 ## weight 추가/교체

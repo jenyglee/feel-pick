@@ -106,27 +106,55 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 > `apps/web`에서 작업 시 **`apps/web/AGENTS.md`도 반드시 확인** — Next 16은 breaking changes가 있어 학습 데이터의 옛 패턴과 다를 수 있음. 컴포넌트 코드 전 `node_modules/next/dist/docs/` 참고.
 
 - **App Router** (`src/app/`). 기본은 **서버 컴포넌트**(async 함수에서 직접 데이터 fetch).
-- **API 호출은 `src/lib/api.ts`의 `api`(openapi-fetch) 사용.** 경로/응답이 공유 타입(`paths`)으로 검증됨. 직접 `fetch`로 백엔드 부르지 말 것.
+- **API 호출은 `src/shared/api`의 `api`(openapi-fetch) 사용.** 경로/응답이 공유 타입(`paths`)으로 검증됨. 직접 `fetch`로 백엔드 부르지 말 것.
 - 타입은 `@feel-pick/api-types`에서: `import type { Schemas } from '@feel-pick/api-types'` → `Schemas['Pick']`. (TS 내장 `Pick`과 겹쳐서 개별 export 안 함)
 - 라이브 데이터 페이지는 `export const dynamic = 'force-dynamic'`.
 - API 베이스 URL: `process.env.API_URL ?? 'http://localhost:3000'` (컨테이너는 `http://backend:3000`). 서버 런타임 env라 `NEXT_PUBLIC_`이 아닌 `API_URL` 사용.
 - 스타일: **Tailwind CSS** (className). 별도 CSS 파일 남발 금지.
 - 파일: 컴포넌트 PascalCase, 라우트는 App Router 규칙(`page.tsx`, `layout.tsx`).
 
-### 5.1 파일 역할 / 코드 배치 (단일 책임)
+### 5.1 아키텍처 — Feature-Sliced Design (FSD)
 
-- **한 파일 = 한 역할.** 어떤 코드가 그 파일의 역할과 안 맞으면 **역할에 맞는 파일로 옮기고, 없으면 새로 만든다.** 한 파일이 두 역할을 지면 분리한다.
-- **`src/app/`엔 라우트 관련 파일만** (`page.tsx`/`layout.tsx`/`route.ts` + 그 라우트 전용 UI). 공용 모듈(폰트·유틸·훅·상수 등)은 ✕ → `src/lib`·`src/components`로.
-- 라우트 파일엔 **라우팅·렌더링만.** 폰트 로딩·SDK 초기화·상수·비즈니스 로직은 ✕ → 전용 모듈로.
+`apps/web/src`는 **FSD**로 구성한다. 기술 종류(`components/`·`lib/`)가 아니라 **도메인(기능) 단위**로 코드를 격리한다.
+
+**한 파일 = 한 역할.** 어떤 코드가 그 파일의 역할과 안 맞으면 역할에 맞는 위치로 옮긴다(없으면 새로 만든다).
+
+**레이어 (위 → 아래 단방향 의존)**: `app` → `views` → `widgets` → `features` → `entities` → `shared`.
+- 위 레이어만 아래를 import한다. **같은 레이어의 다른 슬라이스를 직접 import 금지.** 공통이 필요하면 아래 레이어로 내린다.
+- `views`는 FSD의 "pages"를 개명한 것(Next `app/`과 이름 충돌 회피).
+
+| 레이어 | 책임 | 예 |
+|---|---|---|
+| `app/` | **Next 라우팅 전용** (`layout`·`page`·`globals.css`). FSD 레이어 아님 | `app/page.tsx` → `views` 렌더 |
+| `views/` | 화면 단위 조립·오케스트레이션 | `views/choice/ui/ChoicePage.tsx` |
+| `widgets/` | 자족적 복합 UI 블록 | `widgets/bottom-nav` |
+| `features/` | 사용자 상호작용(비즈니스 가치) | `features/profile/profile-select` |
+| `entities/` | 비즈니스 엔티티(데이터+표현) | `entities/profile` (`ui`·`model`) |
+| `shared/` | 도메인 무관 인프라 | `shared/api`·`shared/ui`·`shared/config` |
+
+**그룹핑**: 각 레이어를 엔티티 대범주(`profile`·`question`·`user`…)로 묶는다.
+- `entities/<범주>` = 슬라이스 자체. `features/<범주>/<범주>-<행위>` = 그 범주에 대한 기능 슬라이스 (예: `features/profile/profile-select`, `features/question/question-skip`).
+- **그룹 폴더는 조직용일 뿐 public API가 없다** — `features/profile/index.ts`로 슬라이스들을 묶지 말 것.
+
+**슬라이스 = 단위, Public API = `index.ts`**:
+- 슬라이스 내부는 segment로 나눈다: `ui/`(컴포넌트)·`model/`(타입·상태)·`api/`(서버 호출)·`lib/`(슬라이스 전용 util).
+- 슬라이스 바깥에서는 **그 슬라이스의 `index.ts`로만** 접근한다. 내부 파일 직접 import 금지.
+
+**배치 맵**:
+- API 클라이언트(openapi-fetch) → `shared/api`
+- 아이콘(SVGR 생성) → `shared/ui/icons` (소스 svg는 `public/icons`, `npm run icons`로 생성)
+- 폰트 로더/파일 → `shared/config/fonts`
+- 디자인 토큰(컬러/타이포) → `src/app/globals.css`의 `@theme` (유지)
+- 순수 함수·공용 hook → `shared/lib`
+- 화면 → `views/<범주>`, 기능 → `features/<범주>/...`, 엔티티 → `entities/<범주>`
+
+**`app/` 규칙(유지)**: `app/`엔 라우트 파일만(`page.tsx`/`layout.tsx`/`route.ts`). 폰트 로딩·SDK 초기화·비즈니스 로직 ✕ → 해당 레이어로.
   - (나쁜 예) `layout.tsx` 안에서 `localFont({...})` 정의
-  - (좋은 예) `src/lib/fonts/index.ts`에 정의 후 `import { nanumSquareNeo } from "@/lib/fonts"`
-- 배치 맵:
-  - 폰트 로더/파일 → `src/lib/fonts/`
-  - 디자인 토큰(컬러/타이포) → `src/app/globals.css`의 `@theme`
-  - API 호출 → `src/lib/api.ts` (openapi-fetch)
-  - 순수 함수·공용 로직 → `src/lib/` (`utils`·`hooks`·`constants`·`types` 등)
-  - 재사용 컴포넌트 → `src/components/` (처음 필요할 때 생성)
-- import는 `@/*` 별칭(`@/* → ./src/*`) 사용. 판단이 애매하면 비슷한 기존 코드 옆에 둔다.
+  - (좋은 예) `shared/config/fonts/index.ts`에 정의 후 `import { nanumSquareNeo } from "@/shared/config/fonts"`
+
+import는 `@/*` 별칭(`@/* → ./src/*`). 예: `@/shared/api`, `@/entities/profile`, `@/features/profile/profile-select`.
+
+> **마이그레이션 진행 중**: 현재 `shared` 레이어까지 이전 완료. `entities`/`features`/`widgets`/`views`는 순차 이전 예정(그 전까지 일부 코드가 `src/components/choice`에 남아 있을 수 있음).
 
 ---
 

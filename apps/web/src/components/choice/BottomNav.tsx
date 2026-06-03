@@ -1,4 +1,4 @@
-import { IcHeart24, IcHome24, IcThunder24 } from '@/lib/ui/icons';
+import { IcHeart24, IcHome24, IcThunder24 } from '@/shared/ui/icons';
 
 // 하단 탭바. 현재는 "초이스"만 구현되어 활성, 나머지는 자리표시.
 const tabs = [

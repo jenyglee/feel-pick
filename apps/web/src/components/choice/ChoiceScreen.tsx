@@ -2,14 +2,13 @@
 
 import type { Schemas } from '@feel-pick/api-types';
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { api } from '@/shared/api';
 import { BottomNav } from './BottomNav';
-// TODO: 전용 bell/refresh/chevrons-right 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
+// TODO: 전용 refresh/chevrons-right 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
 import {
-  IcHome24 as BellIcon,
   IcHome24 as ChevronsRightIcon,
   IcHome24 as RefreshIcon,
-} from '@/lib/ui/icons';
+} from '@/shared/ui/icons';
 import { ProfileCard } from './ProfileCard';
 import { ProfileDetail } from './ProfileDetail';
 

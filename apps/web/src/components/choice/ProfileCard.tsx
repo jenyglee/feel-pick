@@ -3,7 +3,7 @@
 import type { Schemas } from '@feel-pick/api-types';
 import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 // TODO: 전용 info 아이콘 SVG가 준비되면 교체. 현재는 임시로 home 아이콘 사용.
-import { IcHome24 as InfoIcon } from '@/lib/ui/icons';
+import { IcHome24 as InfoIcon } from '@/shared/ui/icons';
 
 type Profile = Schemas['Profile'];
 
