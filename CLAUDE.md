@@ -154,7 +154,7 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 
 import는 `@/*` 별칭(`@/* → ./src/*`). 예: `@/shared/api`, `@/entities/profile`, `@/features/profile/profile-select`.
 
-> **마이그레이션 진행 중**: 현재 `shared` 레이어까지 이전 완료. `entities`/`features`/`widgets`/`views`는 순차 이전 예정(그 전까지 일부 코드가 `src/components/choice`에 남아 있을 수 있음).
+> 현재 전 레이어(`shared`/`entities`/`features`/`widgets`/`views`)가 FSD로 구성됨. 초이스 화면이 레퍼런스: `views/choice` → `widgets/bottom-nav` + `features/profile|question/*` + `entities/profile|choice|question` → `shared/*`.
 
 ---
 

@@ -16,7 +16,7 @@ import {
 } from '@/shared/ui/icons';
 import { BottomNav } from '@/widgets/bottom-nav';
 
-export function ChoiceScreen() {
+export function ChoicePage() {
   const [feed, setFeed] = useState<ChoiceFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
