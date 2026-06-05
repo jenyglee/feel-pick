@@ -1,6 +1,9 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UsersRepository } from '../users/users.repository';
-import { ConversationsRepository, sortedPair } from './conversations.repository';
+import {
+  ConversationsRepository,
+  sortedPair,
+} from './conversations.repository';
 import { ConversationsService } from './conversations.service';
 
 describe('sortedPair', () => {
