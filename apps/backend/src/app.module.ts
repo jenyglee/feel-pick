@@ -10,7 +10,9 @@ import { ChoiceModule } from './choice/choice.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ReceivedPicksModule } from './received-picks/received-picks.module';
 import { UsersModule } from './users/users.module';
+import { ViewerModule } from './viewer/viewer.module';
 
 const isProd = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
@@ -43,6 +45,8 @@ const isTest = process.env.NODE_ENV === 'test';
     UsersModule,
     AuthModule,
     ChoiceModule,
+    ViewerModule,
+    ReceivedPicksModule,
     HealthModule,
   ],
   controllers: [AppController],

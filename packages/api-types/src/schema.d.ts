@@ -111,6 +111,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/viewer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 현재 유저("나") 조회 (프리미엄 여부 포함) */
+        get: operations["ViewerController_getViewer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/viewer/premium": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 프리미엄 구독('가입하기') — 즉시 프리미엄 ON(임시) */
+        post: operations["ViewerController_subscribePremium"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/received-picks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 나를 픽한 사람 목록 + 각자의 받은픽 Top3
+         * @description 비프리미엄이면 selector 사진은 서버에서 가려진다(photoUrl=null).
+         */
+        get: operations["ReceivedPicksController_getReceivedPicks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -211,6 +265,46 @@ export interface components {
              * @description 선택한 유저 ID
              */
             selectedUserId: string;
+        };
+        Viewer: {
+            /** Format: uuid */
+            id: string;
+            /** @example 나 */
+            displayName: string;
+            /** @example https://i.pravatar.cc/600?img=8 */
+            photoUrl: string | null;
+            /** @description 프리미엄 구독 여부(임시) */
+            isPremium: boolean;
+        };
+        Top3Item: {
+            /** @example 술 잘 먹을 것 같은 친구 */
+            questionText: string;
+            /**
+             * @description 그 주제로 받은 픽 수
+             * @example 12
+             */
+            votes: number;
+        };
+        ReceivedPick: {
+            /** @description 나를 픽한 사람 (비프리미엄이면 photoUrl=null) */
+            selector: components["schemas"]["Profile"];
+            /**
+             * @description 나를 픽한 주제(대표: 가장 최근 픽)
+             * @example 1프로라도 관심이 가는 친구
+             */
+            questionText: string;
+            /** Format: date-time */
+            pickedAt: string;
+            /** @description 그 사람이 받은 픽 Top3 */
+            top3: components["schemas"]["Top3Item"][];
+        };
+        ReceivedPicks: {
+            /**
+             * @description 내가 받은 총 픽 수
+             * @example 174
+             */
+            total: number;
+            items: components["schemas"]["ReceivedPick"][];
         };
     };
     responses: never;
@@ -343,6 +437,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChoiceFeed"];
+                };
+            };
+        };
+    };
+    ViewerController_getViewer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_subscribePremium: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ReceivedPicksController_getReceivedPicks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivedPicks"];
                 };
             };
         };

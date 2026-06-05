@@ -172,6 +172,73 @@
         ]
       }
     },
+    "/viewer": {
+      "get": {
+        "operationId": "ViewerController_getViewer",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "summary": "현재 유저(\"나\") 조회 (프리미엄 여부 포함)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/premium": {
+      "post": {
+        "operationId": "ViewerController_subscribePremium",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "summary": "프리미엄 구독('가입하기') — 즉시 프리미엄 ON(임시)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/received-picks": {
+      "get": {
+        "description": "비프리미엄이면 selector 사진은 서버에서 가려진다(photoUrl=null).",
+        "operationId": "ReceivedPicksController_getReceivedPicks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedPicks"
+                }
+              }
+            }
+          }
+        },
+        "summary": "나를 픽한 사람 목록 + 각자의 받은픽 Top3",
+        "tags": [
+          "received-picks"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "HealthController_check",
@@ -547,6 +614,107 @@
         "required": [
           "questionId",
           "selectedUserId"
+        ]
+      },
+      "Viewer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "나"
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://i.pravatar.cc/600?img=8"
+          },
+          "isPremium": {
+            "type": "boolean",
+            "description": "프리미엄 구독 여부(임시)"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "photoUrl",
+          "isPremium"
+        ]
+      },
+      "Top3Item": {
+        "type": "object",
+        "properties": {
+          "questionText": {
+            "type": "string",
+            "example": "술 잘 먹을 것 같은 친구"
+          },
+          "votes": {
+            "type": "number",
+            "example": 12,
+            "description": "그 주제로 받은 픽 수"
+          }
+        },
+        "required": [
+          "questionText",
+          "votes"
+        ]
+      },
+      "ReceivedPick": {
+        "type": "object",
+        "properties": {
+          "selector": {
+            "description": "나를 픽한 사람 (비프리미엄이면 photoUrl=null)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Profile"
+              }
+            ]
+          },
+          "questionText": {
+            "type": "string",
+            "example": "1프로라도 관심이 가는 친구",
+            "description": "나를 픽한 주제(대표: 가장 최근 픽)"
+          },
+          "pickedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "top3": {
+            "description": "그 사람이 받은 픽 Top3",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Top3Item"
+            }
+          }
+        },
+        "required": [
+          "selector",
+          "questionText",
+          "pickedAt",
+          "top3"
+        ]
+      },
+      "ReceivedPicks": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 174,
+            "description": "내가 받은 총 픽 수"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceivedPick"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "items"
         ]
       }
     }
