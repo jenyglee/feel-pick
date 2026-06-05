@@ -119,6 +119,7 @@ async function main(): Promise<void> {
       bio: ME.bio,
       distanceKm: ME.distanceKm,
       interests: ME.interests,
+      isPremium: false, // 재시드 시 데모 시작 상태(비프리미엄)로 리셋
     },
     create: {
       id: DEV_USER_ID,
