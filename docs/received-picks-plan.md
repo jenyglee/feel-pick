@@ -3,7 +3,7 @@
 > 하단탭 **받은 픽** 화면군(소통 메시지함 · 1:1 실시간 채팅 · 받은픽 리스트 · 프리미엄 게이팅 · 프로필 모달)의 구현 계획.
 > 백엔드(NestJS) + 프론트(Next.js, FSD) 양쪽에 걸친 **대형 기능**이라 단계(Phase)로 쪼갠다.
 >
-> 작성일: 2026-06-03 · 상태: **계획만 수립(미구현)**
+> 작성일: 2026-06-03 · 상태: **구현 완료(P-A~P-G)** — 2026-06-05
 
 ---
 
@@ -166,17 +166,20 @@ shared/
 
 > 각 Phase 끝에 검증: `npm run lint` · `npm test` · `npm run build`. 백엔드/DB/인증 흐름 바꾼 Phase는 `npm run test:e2e`까지. 백엔드 응답 형태 바꾸면 **타입 재생성 후 web 빌드**.
 
-- **P-A 백엔드 토대**
-  - Prisma: `Conversation`·`Message` 추가, `User.isPremium` 추가 → `prisma:migrate`
-  - "나" 처리: dev 헤더(`x-user-id`)/고정 ID 주입 메커니즘
+- ✅ **P-A 백엔드 토대**
+  - Prisma: `Conversation`·`Message` 추가, `User.isPremium` 추가 → 마이그레이션
+  - "나" 처리: dev 헤더 `x-user-id`(없으면 고정 `DEV_USER_ID` 폴백) → `DevUserGuard`
   - `choice/select`가 selector("나") 기록
-  - seed 확장: "나"에게 온 픽 다수(스샷의 174건 느낌) + 일부 대화/메시지
-- **P-B 받은픽 API**: `GET /received-picks`(Top3 집계 + 이미지 게이팅), `PATCH /me/premium`, `viewer`(isPremium) → 타입 재생성
-- **P-C 채팅 API + 게이트웨이**: conversations REST + Socket.IO 게이트웨이(메시지 영속+브로드캐스트)
-- **P-D 프론트 뼈대**: 라우팅(`/received`·`/chat/[id]`·`/me`) + BottomNav 네비게이션화 + `/received` 탭 셸
-- **P-E 받은픽 리스트 + 프리미엄**: 받은픽 엔티티/카드, 프리미엄 유도 팝업, '가입하기'→구독→리페치로 사진 공개
-- **P-F 프로필 모달 + 소통하기**: 카드→모달, '소통하기'→대화 생성→`/chat/[id]` 이동
-- **P-G 소통 목록 + 1:1 실시간 채팅**: 소통 리스트(안읽음), 채팅 화면 + 소켓 송수신
+  - seed 확장: "나"에게 온 픽 112건 + 대화 3개/메시지 8개(시드 PRNG로 재현 가능)
+- ✅ **P-B 받은픽 API**: `GET /received-picks`(Top3 단일 groupBy 집계 + 서버 이미지 게이팅), `POST /viewer/premium`, `GET /viewer`(isPremium) → 타입 재생성
+- ✅ **P-C 채팅 API + 게이트웨이**: conversations REST + Socket.IO 게이트웨이(ns `/chat`, 메시지 영속+room 브로드캐스트)
+- ✅ **P-D 프론트 뼈대**: 라우팅(`/received`·`/chat/[id]`·`/me`) + BottomNav 네비게이션화 + `/received` 탭 셸
+- ✅ **P-E 받은픽 리스트 + 프리미엄**: 받은픽 엔티티/카드, 프리미엄 유도 팝업, '가입하기'→구독→리페치로 사진 공개
+- ✅ **P-F 프로필 모달 + 소통하기**: 카드→모달, '소통하기'→대화 생성→`/chat/[id]` 이동
+- ✅ **P-G 소통 목록 + 1:1 실시간 채팅**: 소통 리스트(안읽음), 채팅 화면 + 소켓 송수신
+
+> 실제 구현은 계획과 일부 차이: 프리미엄 토글은 `POST /viewer/premium`(계획의 `PATCH /me/premium`),
+> "나" 조회는 `GET /viewer`(계획의 `GET /me` 확장). DevUserGuard는 진짜 로그인 도입 시 JwtAuthGuard로 교체.
 
 ### 권장 순서
 **받은픽 먼저**(P-A~P-F) → 채팅(P-C 일부 선행 가능, P-G 마지막). 채팅 인프라(Socket.IO)는 분리된 큰 덩어리라 독립 PR로.
