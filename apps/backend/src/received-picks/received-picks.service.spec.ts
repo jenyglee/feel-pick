@@ -18,6 +18,7 @@ describe('ReceivedPicksService', () => {
     return {
       createdAt,
       selectorUserId,
+      questionId: 'q-' + questionText,
       selector: {
         id: selectorUserId,
         displayName: `사용자-${selectorUserId}`,

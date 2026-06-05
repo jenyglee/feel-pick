@@ -1,9 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getReceivedPicks, type ReceivedPicks } from '@/entities/received-pick';
+import {
+  getReceivedPicks,
+  type ReceivedPick,
+  type ReceivedPicks,
+} from '@/entities/received-pick';
 import { getViewer, type Viewer } from '@/entities/viewer';
 import { PremiumPopup } from '@/features/premium/premium-subscribe';
+import { ProfileModal } from '@/widgets/profile-modal';
 import { ReceivedPickCard } from '@/widgets/received-pick-card';
 
 // 받은픽 패널: 나를 픽한 사람 리스트. 비프리미엄은 사진이 가려지고,
@@ -14,6 +19,7 @@ export function ReceivedPanel() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
+  const [selected, setSelected] = useState<ReceivedPick | null>(null);
 
   const loadReceived = useCallback(async () => {
     const { data, error } = await getReceivedPicks();
@@ -39,9 +45,10 @@ export function ReceivedPanel() {
     };
   }, []);
 
-  const handleCardClick = () => {
-    // 비프리미엄: 사진을 못 보니 결제 유도. (프리미엄 프로필 모달은 P-F)
+  const handleCardClick = (item: ReceivedPick) => {
+    // 비프리미엄: 사진을 못 보니 결제 유도. 프리미엄: 프로필 모달 → 소통하기.
     if (!viewer?.isPremium) setPopupOpen(true);
+    else setSelected(item);
   };
 
   const handleSubscribed = (v: Viewer) => {
@@ -93,7 +100,7 @@ export function ReceivedPanel() {
           <ReceivedPickCard
             key={item.selector.id}
             item={item}
-            onClick={handleCardClick}
+            onClick={() => handleCardClick(item)}
           />
         ))}
         {data && data.items.length === 0 && (
@@ -107,6 +114,14 @@ export function ReceivedPanel() {
         <PremiumPopup
           onClose={() => setPopupOpen(false)}
           onSubscribed={handleSubscribed}
+        />
+      )}
+
+      {selected && (
+        <ProfileModal
+          profile={selected.selector}
+          questionId={selected.questionId}
+          onClose={() => setSelected(null)}
         />
       )}
     </div>

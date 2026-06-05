@@ -48,6 +48,7 @@ export class ReceivedPicksService {
     type Representative = {
       selectorUserId: string;
       selector: SelectorProfile;
+      questionId: string;
       questionText: string;
       pickedAt: Date;
     };
@@ -58,6 +59,7 @@ export class ReceivedPicksService {
       representatives.set(r.selectorUserId, {
         selectorUserId: r.selectorUserId,
         selector: r.selector,
+        questionId: r.questionId,
         questionText: r.question.text,
         pickedAt: r.createdAt,
       });
@@ -96,6 +98,7 @@ export class ReceivedPicksService {
 
       return {
         selector,
+        questionId: rep.questionId,
         questionText: rep.questionText,
         pickedAt: rep.pickedAt,
         top3,

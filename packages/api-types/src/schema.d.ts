@@ -325,6 +325,11 @@ export interface components {
             /** @description 나를 픽한 사람 (비프리미엄이면 photoUrl=null) */
             selector: components["schemas"]["Profile"];
             /**
+             * Format: uuid
+             * @description 나를 픽한 주제의 질문 ID
+             */
+            questionId: string;
+            /**
              * @description 나를 픽한 주제(대표: 가장 최근 픽)
              * @example 1프로라도 관심이 가는 친구
              */

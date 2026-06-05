@@ -10,6 +10,9 @@ export default class ReceivedPick {
   })
   selector: Profile;
 
+  @ApiProperty({ format: 'uuid', description: '나를 픽한 주제의 질문 ID' })
+  questionId: string;
+
   @ApiProperty({
     example: '1프로라도 관심이 가는 친구',
     description: '나를 픽한 주제(대표: 가장 최근 픽)',

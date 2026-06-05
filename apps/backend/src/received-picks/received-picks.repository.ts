@@ -30,6 +30,7 @@ export class ReceivedPicksRepository {
       select: {
         createdAt: true,
         selectorUserId: true,
+        questionId: true,
         selector: { select: profileSelect },
         question: { select: { text: true } },
       },
