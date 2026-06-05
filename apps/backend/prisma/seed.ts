@@ -107,8 +107,14 @@ async function main(): Promise<void> {
       data: QUESTIONS.map((text) => ({ text })),
     });
   }
-  const questions = await prisma.question.findMany({ select: { id: true } });
-  const questionIds = questions.map((q) => q.id);
+  const questions = await prisma.question.findMany({
+    select: { id: true, text: true },
+  });
+  // QUESTIONS 배열 순서대로 (대화 시드의 questionIdx가 의도한 주제와 맞아떨어지게).
+  const idByQuestionText = new Map(questions.map((q) => [q.text, q.id]));
+  const questionIds = QUESTIONS.map(
+    (t) => idByQuestionText.get(t) as string,
+  );
 
   // "나": 고정 id로 upsert.
   await prisma.user.upsert({
@@ -152,9 +158,13 @@ async function main(): Promise<void> {
 
   const profileUsers = await prisma.user.findMany({
     where: { email: { in: USERS.map((u) => `${u.handle}@seed.feelpick.dev`) } },
-    select: { id: true },
+    select: { id: true, email: true },
   });
-  const profileIds = profileUsers.map((u) => u.id);
+  // USERS 배열 순서대로 정렬 (findMany는 순서 보장 X) → 대화 시드의 partnerIdx가 맞아떨어지게.
+  const idByEmail = new Map(profileUsers.map((u) => [u.email, u.id]));
+  const profileIds = USERS.map(
+    (u) => idByEmail.get(`${u.handle}@seed.feelpick.dev`) as string,
+  );
 
   // 관계형 목 데이터(픽 그래프·대화)는 매번 초기화 후 재생성 → 재실행 안정.
   await prisma.message.deleteMany();
