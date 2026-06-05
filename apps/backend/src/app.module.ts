@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ChoiceModule } from './choice/choice.module';
+import { ConversationsModule } from './conversations/conversations.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -47,6 +48,7 @@ const isTest = process.env.NODE_ENV === 'test';
     ChoiceModule,
     ViewerModule,
     ReceivedPicksModule,
+    ConversationsModule,
     HealthModule,
   ],
   controllers: [AppController],

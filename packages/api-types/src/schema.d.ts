@@ -165,6 +165,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 소통 목록(메시지함) */
+        get: operations["ConversationsController_getConversations"];
+        put?: never;
+        /** 소통하기 — 대화 생성(이미 있으면 반환) */
+        post: operations["ConversationsController_createConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 메시지 히스토리 (열면 읽음 처리) */
+        get: operations["ConversationsController_getMessages"];
+        put?: never;
+        /** 메시지 전송 (REST 폴백; 정식 송신은 소켓) */
+        post: operations["ConversationsController_sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -305,6 +341,54 @@ export interface components {
              */
             total: number;
             items: components["schemas"]["ReceivedPick"][];
+        };
+        Message: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            senderId: string;
+            /** @example 안녕하세요! 픽 감사해요 ㅎㅎ */
+            text: string;
+            /**
+             * Format: date-time
+             * @description 읽은 시각 (null이면 안읽음)
+             */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @description 상대 */
+            partner: components["schemas"]["Profile"];
+            /** @description 소통 시작의 픽 주제(뱃지용) */
+            questionText: string | null;
+            /** @description 마지막 메시지 (없으면 null) */
+            lastMessage: components["schemas"]["Message"] | null;
+            /**
+             * @description 안읽은 메시지 수
+             * @example 2
+             */
+            unreadCount: number;
+        };
+        CreateConversationDto: {
+            /**
+             * Format: uuid
+             * @description 소통할 상대 유저 ID
+             */
+            targetUserId: string;
+            /**
+             * Format: uuid
+             * @description 소통 시작의 픽 주제(뱃지용)
+             */
+            questionId?: string;
+        };
+        SendMessageDto: {
+            /** @example 안녕하세요! */
+            text: string;
         };
     };
     responses: never;
@@ -494,6 +578,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceivedPicks"];
+                };
+            };
+        };
+    };
+    ConversationsController_getConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"][];
+                };
+            };
+        };
+    };
+    ConversationsController_createConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"];
+                };
+            };
+        };
+    };
+    ConversationsController_getMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"][];
+                };
+            };
+        };
+    };
+    ConversationsController_sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
                 };
             };
         };

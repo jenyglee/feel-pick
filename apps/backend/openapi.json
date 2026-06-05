@@ -239,6 +239,134 @@
         ]
       }
     },
+    "/conversations": {
+      "get": {
+        "operationId": "ConversationsController_getConversations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationSummary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "소통 목록(메시지함)",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "ConversationsController_createConversation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConversationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "소통하기 — 대화 생성(이미 있으면 반환)",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/conversations/{id}/messages": {
+      "get": {
+        "operationId": "ConversationsController_getMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "메시지 히스토리 (열면 읽음 처리)",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "ConversationsController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          }
+        },
+        "summary": "메시지 전송 (REST 폴백; 정식 송신은 소켓)",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "HealthController_check",
@@ -715,6 +843,120 @@
         "required": [
           "total",
           "items"
+        ]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "example": "안녕하세요! 픽 감사해요 ㅎㅎ"
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "읽은 시각 (null이면 안읽음)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderId",
+          "text",
+          "readAt",
+          "createdAt"
+        ]
+      },
+      "ConversationSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partner": {
+            "description": "상대",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Profile"
+              }
+            ]
+          },
+          "questionText": {
+            "type": "string",
+            "nullable": true,
+            "description": "소통 시작의 픽 주제(뱃지용)"
+          },
+          "lastMessage": {
+            "nullable": true,
+            "description": "마지막 메시지 (없으면 null)",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Message"
+              }
+            ]
+          },
+          "unreadCount": {
+            "type": "number",
+            "example": 2,
+            "description": "안읽은 메시지 수"
+          }
+        },
+        "required": [
+          "id",
+          "partner",
+          "questionText",
+          "lastMessage",
+          "unreadCount"
+        ]
+      },
+      "CreateConversationDto": {
+        "type": "object",
+        "properties": {
+          "targetUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "소통할 상대 유저 ID"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "소통 시작의 픽 주제(뱃지용)"
+          }
+        },
+        "required": [
+          "targetUserId"
+        ]
+      },
+      "SendMessageDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "안녕하세요!",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "text"
         ]
       }
     }
