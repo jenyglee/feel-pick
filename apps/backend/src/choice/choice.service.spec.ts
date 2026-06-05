@@ -80,14 +80,18 @@ describe('ChoiceService', () => {
       repo.findRandomQuestion.mockResolvedValue(question);
       repo.findRandomCandidates.mockResolvedValue(candidates);
 
-      const feed = await service.select({
-        questionId: 'q1',
-        selectedUserId: 'u1',
-      });
+      const feed = await service.select(
+        {
+          questionId: 'q1',
+          selectedUserId: 'u1',
+        },
+        'me',
+      );
 
       expect(repo.createSelection).toHaveBeenCalledWith({
         questionId: 'q1',
         selectedUserId: 'u1',
+        selectorUserId: 'me',
       });
       expect(feed.candidates).toHaveLength(2);
     });
@@ -96,7 +100,7 @@ describe('ChoiceService', () => {
       repo.questionExists.mockResolvedValue(false);
 
       await expect(
-        service.select({ questionId: 'nope', selectedUserId: 'u1' }),
+        service.select({ questionId: 'nope', selectedUserId: 'u1' }, 'me'),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repo.createSelection).not.toHaveBeenCalled();
     });
@@ -106,7 +110,7 @@ describe('ChoiceService', () => {
       repo.userExists.mockResolvedValue(false);
 
       await expect(
-        service.select({ questionId: 'q1', selectedUserId: 'nope' }),
+        service.select({ questionId: 'q1', selectedUserId: 'nope' }, 'me'),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repo.createSelection).not.toHaveBeenCalled();
     });

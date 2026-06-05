@@ -5,6 +5,7 @@ const publicUserSelect = {
   id: true,
   email: true,
   displayName: true,
+  isPremium: true,
   createdAt: true,
 } as const;
 

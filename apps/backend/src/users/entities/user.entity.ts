@@ -10,6 +10,9 @@ export default class User {
   @ApiProperty()
   displayName: string;
 
+  @ApiProperty({ description: '프리미엄 구독 여부(임시)' })
+  isPremium: boolean;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt: Date;
 }

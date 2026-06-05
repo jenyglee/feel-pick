@@ -29,7 +29,10 @@ export class ChoiceService {
   }
 
   /** 선택을 기록하고, 새 질문 + 새 후보를 반환한다. */
-  async select(dto: SelectChoiceDto): Promise<ChoiceFeed> {
+  async select(
+    dto: SelectChoiceDto,
+    selectorUserId: string,
+  ): Promise<ChoiceFeed> {
     if (!(await this.repo.questionExists(dto.questionId))) {
       throw new NotFoundException('질문을 찾을 수 없습니다.');
     }
@@ -37,10 +40,11 @@ export class ChoiceService {
       throw new NotFoundException('선택한 유저를 찾을 수 없습니다.');
     }
 
-    // 공개 API라 selector(누가 골랐는지)는 비워둠. 인증 도입 시 채운다.
+    // selector("나")를 기록 → 상대의 "받은픽" 데이터가 된다.
     await this.repo.createSelection({
       questionId: dto.questionId,
       selectedUserId: dto.selectedUserId,
+      selectorUserId,
     });
 
     return this.getFeed();

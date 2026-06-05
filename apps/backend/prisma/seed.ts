@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { DEV_USER_ID } from '../src/common/dev-user/dev-user.constant';
 
 // PrismaService와 동일한 어댑터 구성 (standalone 스크립트용).
 function createAdapter(databaseUrl: string): PrismaMariaDb {
@@ -19,6 +20,28 @@ function createAdapter(databaseUrl: string): PrismaMariaDb {
 const prisma = new PrismaClient({
   adapter: createAdapter(process.env.DATABASE_URL ?? ''),
 });
+
+// 재실행 시 목 데이터(픽 그래프·대화)를 동일하게 만들기 위한 시드 PRNG (mulberry32).
+function makeRng(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = makeRng(20260605);
+
+function pick<T>(arr: T[], n: number, rand: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+}
 
 const QUESTIONS = [
   '술 잘 먹을 것 같은 친구',
@@ -38,6 +61,16 @@ type SeedUser = {
   interests: string[];
 };
 
+// "나"(현재 유저) — 고정 id. dev 헤더 x-user-id 없을 때의 폴백 대상.
+const ME: SeedUser = {
+  handle: 'me',
+  displayName: '나',
+  img: 8,
+  bio: '오늘도 누가 날 픽했을까 👀',
+  distanceKm: 0,
+  interests: ['감성', '산책', '카페'],
+};
+
 const USERS: SeedUser[] = [
   { handle: 'hxrxx', displayName: '하리니', img: 5, bio: '@hx_rxx_ 맞팔도 받아용!', distanceKm: 17, interests: ['홍대', '스티커 사진', '닌텐도', '공부', '스요잉', '댄스'] },
   { handle: 'jaewon', displayName: '이재원', img: 12, bio: '주말엔 무조건 카페 투어 ☕', distanceKm: 3, interests: ['카페', '사진', '러닝'] },
@@ -47,6 +80,22 @@ const USERS: SeedUser[] = [
   { handle: 'yuna', displayName: '유나', img: 31, bio: '노래방 가면 4시간 기본', distanceKm: 5, interests: ['노래방', '뮤지컬', '카페'] },
   { handle: 'doyun', displayName: '도윤', img: 44, bio: '보드게임 / 방탈출 좋아해요', distanceKm: 15, interests: ['보드게임', '방탈출', '캠핑'] },
   { handle: 'haeun', displayName: '하은', img: 47, bio: '강아지랑 산책하는 게 취미예요 🐶', distanceKm: 9, interests: ['반려견', '산책', '베이킹'] },
+  { handle: 'seoyeon', displayName: '서연', img: 1, bio: '필름카메라 들고 다녀요 📷', distanceKm: 6, interests: ['필름카메라', '여행', '재즈'] },
+  { handle: 'jihu', displayName: '지후', img: 13, bio: '클라이밍 같이 하실 분!', distanceKm: 19, interests: ['클라이밍', '맥주', '축구'] },
+  { handle: 'nayeon', displayName: '나연', img: 24, bio: '디저트 맛집은 다 압니다 🍰', distanceKm: 4, interests: ['디저트', '베이킹', '드라마'] },
+  { handle: 'taeoh', displayName: '태오', img: 33, bio: '주말 드라이브 좋아해요', distanceKm: 27, interests: ['드라이브', '음악', '캠핑'] },
+  { handle: 'eunchae', displayName: '은채', img: 9, bio: '요가 + 필라테스 일상', distanceKm: 11, interests: ['요가', '필라테스', '명상'] },
+  { handle: 'siwoo', displayName: '시우', img: 51, bio: '코딩하다 가끔 나옵니다', distanceKm: 14, interests: ['개발', '게임', 'LP'] },
+  { handle: 'dahyun', displayName: '다현', img: 26, bio: '플리 공유 환영 🎧', distanceKm: 7, interests: ['음악', '페스티벌', '카페'] },
+  { handle: 'gunwoo', displayName: '건우', img: 53, bio: '농구 / 헬스 / 치맥', distanceKm: 21, interests: ['농구', '헬스', '치맥'] },
+  { handle: 'yerin', displayName: '예린', img: 45, bio: '고양이 두 마리 집사 🐱', distanceKm: 10, interests: ['고양이', '독서', '뜨개질'] },
+  { handle: 'junseo', displayName: '준서', img: 60, bio: '맛집 탐방이 취미', distanceKm: 18, interests: ['맛집', '여행', '와인'] },
+  { handle: 'chaewon', displayName: '채원', img: 38, bio: '주말엔 미술관 산책', distanceKm: 13, interests: ['미술관', '드로잉', '커피'] },
+  { handle: 'hyeonu', displayName: '현우', img: 56, bio: '자전거로 한강 출퇴근', distanceKm: 16, interests: ['자전거', '러닝', '사진'] },
+  { handle: 'subin', displayName: '수빈', img: 41, bio: '보컬 레슨 받는 중 🎤', distanceKm: 8, interests: ['노래', '뮤지컬', '카페'] },
+  { handle: 'minseo', displayName: '민서', img: 29, bio: '캠핑 가면 불멍 담당', distanceKm: 24, interests: ['캠핑', '등산', '커피'] },
+  { handle: 'woojin', displayName: '우진', img: 64, bio: '스케이트보드 타요', distanceKm: 20, interests: ['스케이트', '힙합', '패션'] },
+  { handle: 'yujin', displayName: '유진', img: 36, bio: '베이킹 클래스 운영해요 🧁', distanceKm: 5, interests: ['베이킹', '플라워', '브런치'] },
 ];
 
 async function main(): Promise<void> {
@@ -58,6 +107,30 @@ async function main(): Promise<void> {
       data: QUESTIONS.map((text) => ({ text })),
     });
   }
+  const questions = await prisma.question.findMany({ select: { id: true } });
+  const questionIds = questions.map((q) => q.id);
+
+  // "나": 고정 id로 upsert.
+  await prisma.user.upsert({
+    where: { id: DEV_USER_ID },
+    update: {
+      displayName: ME.displayName,
+      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
+      bio: ME.bio,
+      distanceKm: ME.distanceKm,
+      interests: ME.interests,
+    },
+    create: {
+      id: DEV_USER_ID,
+      email: 'me@seed.feelpick.dev',
+      passwordHash,
+      displayName: ME.displayName,
+      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
+      bio: ME.bio,
+      distanceKm: ME.distanceKm,
+      interests: ME.interests,
+    },
+  });
 
   // 프로필 유저: email 기준 upsert (재실행 안전).
   for (const u of USERS) {
@@ -76,11 +149,115 @@ async function main(): Promise<void> {
     });
   }
 
-  const [q, n] = await Promise.all([
+  const profileUsers = await prisma.user.findMany({
+    where: { email: { in: USERS.map((u) => `${u.handle}@seed.feelpick.dev`) } },
+    select: { id: true },
+  });
+  const profileIds = profileUsers.map((u) => u.id);
+
+  // 관계형 목 데이터(픽 그래프·대화)는 매번 초기화 후 재생성 → 재실행 안정.
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.selection.deleteMany();
+
+  // 픽 그래프 생성.
+  type Sel = {
+    questionId: string;
+    selectedUserId: string;
+    selectorUserId: string;
+  };
+  const selections: Sel[] = [];
+
+  // 1) "나"가 받은 픽: 각 프로필 유저가 나를 여러 질문에서 픽 (받은픽 리스트의 출처).
+  for (const selectorUserId of profileIds) {
+    const n = 3 + Math.floor(rng() * 4); // 3~6개 질문
+    for (const questionId of pick(questionIds, n, rng)) {
+      selections.push({ questionId, selectedUserId: DEV_USER_ID, selectorUserId });
+    }
+  }
+
+  // 2) 프로필 유저들끼리의 교차 픽: 각 유저의 "받은픽 Top3" 집계 재료.
+  for (const selectorUserId of profileIds) {
+    for (const selectedUserId of profileIds) {
+      if (selectorUserId === selectedUserId) continue;
+      if (rng() < 0.22) {
+        const questionId = questionIds[Math.floor(rng() * questionIds.length)];
+        selections.push({ questionId, selectedUserId, selectorUserId });
+      }
+    }
+  }
+
+  await prisma.selection.createMany({ data: selections });
+
+  // 3) 대화 + 메시지: "나"와 일부 유저 사이에 소통 내역.
+  function pair(a: string, b: string): { userAId: string; userBId: string } {
+    return a < b ? { userAId: a, userBId: b } : { userAId: b, userBId: a };
+  }
+
+  const now = Date.now();
+  const conversationSeeds: {
+    partnerIdx: number;
+    questionIdx: number;
+    messages: { fromMe: boolean; text: string; minutesAgo: number; read: boolean }[];
+  }[] = [
+    {
+      partnerIdx: 0, // 하리니
+      questionIdx: 1,
+      messages: [
+        { fromMe: false, text: '안녕하세요! 픽 감사해요 ㅎㅎ', minutesAgo: 180, read: true },
+        { fromMe: true, text: '오 안녕하세요! 프로필 보고 관심 갔어요 😊', minutesAgo: 176, read: true },
+        { fromMe: false, text: '홍대 자주 가세요? 저도 거기 자주 가는데', minutesAgo: 170, read: true },
+        { fromMe: false, text: '담주에 시간 되면 커피라도 어때요?', minutesAgo: 12, read: false },
+      ],
+    },
+    {
+      partnerIdx: 3, // 소라
+      questionIdx: 2,
+      messages: [
+        { fromMe: true, text: '전시 같이 갈 사람 구한다고 하셔서요!', minutesAgo: 1400, read: true },
+        { fromMe: false, text: '오 진짜요? 이번 주말에 그림전 있어요', minutesAgo: 1390, read: true },
+        { fromMe: true, text: '좋아요 토요일 오후 어떠세요?', minutesAgo: 1385, read: true },
+      ],
+    },
+    {
+      partnerIdx: 5, // 유나
+      questionIdx: 4,
+      messages: [
+        { fromMe: false, text: '노래방 4시간 가능하신 분 맞나요 ㅋㅋㅋ', minutesAgo: 60, read: false },
+      ],
+    },
+  ];
+
+  for (const c of conversationSeeds) {
+    const partnerId = profileIds[c.partnerIdx];
+    const conv = await prisma.conversation.create({
+      data: {
+        ...pair(DEV_USER_ID, partnerId),
+        questionId: questionIds[c.questionIdx],
+        createdAt: new Date(now - 200 * 60_000),
+        messages: {
+          create: c.messages.map((m) => ({
+            senderId: m.fromMe ? DEV_USER_ID : partnerId,
+            text: m.text,
+            createdAt: new Date(now - m.minutesAgo * 60_000),
+            readAt: m.read ? new Date(now - m.minutesAgo * 60_000) : null,
+          })),
+        },
+      },
+    });
+    void conv;
+  }
+
+  const [q, n, s, conv, msg] = await Promise.all([
     prisma.question.count(),
     prisma.user.count(),
+    prisma.selection.count({ where: { selectedUserId: DEV_USER_ID } }),
+    prisma.conversation.count(),
+    prisma.message.count(),
   ]);
-  console.log(`Seed 완료: 질문 ${q}개, 유저 ${n}명`);
+  console.log(
+    `Seed 완료: 질문 ${q}개, 유저 ${n}명, 내가 받은 픽 ${s}건, 대화 ${conv}개, 메시지 ${msg}개`,
+  );
 }
 
 main()

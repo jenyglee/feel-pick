@@ -141,6 +141,7 @@
     },
     "/choices/select": {
       "post": {
+        "description": "\"나\"(임시 유저)를 selector로 기록 → 받은픽 데이터의 출처.",
         "operationId": "ChoiceController_select",
         "parameters": [],
         "requestBody": {
@@ -428,6 +429,10 @@
           "displayName": {
             "type": "string"
           },
+          "isPremium": {
+            "type": "boolean",
+            "description": "프리미엄 구독 여부(임시)"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -437,6 +442,7 @@
           "id",
           "email",
           "displayName",
+          "isPremium",
           "createdAt"
         ]
       },

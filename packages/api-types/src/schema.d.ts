@@ -100,7 +100,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 카드 선택 기록 후 다음 피드 반환 */
+        /**
+         * 카드 선택 기록 후 다음 피드 반환
+         * @description "나"(임시 유저)를 selector로 기록 → 받은픽 데이터의 출처.
+         */
         post: operations["ChoiceController_select"];
         delete?: never;
         options?: never;
@@ -158,6 +161,8 @@ export interface components {
             /** Format: email */
             email: string;
             displayName: string;
+            /** @description 프리미엄 구독 여부(임시) */
+            isPremium: boolean;
             /** Format: date-time */
             createdAt: string;
         };

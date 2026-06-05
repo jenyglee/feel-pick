@@ -21,9 +21,17 @@ model User {
   distanceKm Int? // 목업: 나와의 거리(km). 위치 기능 도입 전 임시 값.
   interests  Json? // string[] 관심사 태그 (MySQL은 스칼라 배열 미지원 → Json)
 
+  // 프리미엄 여부(임시). '가입하기' → true → 받은픽 사진 공개.
+  isPremium Boolean @default(false)
+
   // 선택 기록 관계
   selectionsMade     Selection[] @relation("selector")
   selectionsReceived Selection[] @relation("selected")
+
+  // 채팅 관계 (1:1 대화는 정렬된 쌍 userA<userB로 저장)
+  conversationsA Conversation[] @relation("userA")
+  conversationsB Conversation[] @relation("userB")
+  messages       Message[]
 }
 
 // 카드 위에 제시되는 질문(타이틀). 예: "술 잘 먹을 것 같은 친구"
@@ -32,7 +40,8 @@ model Question {
   text      String   @db.VarChar(100)
   createdAt DateTime @default(now())
 
-  selections Selection[]
+  selections    Selection[]
+  conversations Conversation[]
 }
 
 // 어떤 질문에서 어떤 유저를 골랐는지 기록. (공개 API라 selector는 없을 수 있음 → nullable)
@@ -49,4 +58,35 @@ model Selection {
   @@index([questionId])
   @@index([selectedUserId])
   @@index([selectorUserId])
+}
+
+// 1:1 대화. 같은 두 사람은 대화 1개(정렬된 쌍 userA<userB로 저장 → @@unique).
+model Conversation {
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  userA      User      @relation("userA", fields: [userAId], references: [id], onDelete: Cascade)
+  userAId    String    @db.VarChar(36)
+  userB      User      @relation("userB", fields: [userBId], references: [id], onDelete: Cascade)
+  userBId    String    @db.VarChar(36)
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  questionId String?   @db.VarChar(36) // 소통 시작의 픽 주제(뱃지용)
+  createdAt  DateTime  @default(now())
+  messages   Message[]
+
+  @@unique([userAId, userBId]) // 중복 대화 방지
+  @@index([userAId])
+  @@index([userBId])
+}
+
+// 대화 안의 메시지. DB 영속 후 소켓 브로드캐스트.
+model Message {
+  id             String       @id @default(uuid()) @db.VarChar(36)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String       @db.VarChar(36)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String       @db.VarChar(36)
+  text           String       @db.VarChar(1000)
+  readAt         DateTime? // 안읽음 뱃지용
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
