@@ -27,7 +27,8 @@
 
 | 문서 | 내용 |
 |---|---|
-| [받은 픽 기능 전략](received-picks-plan.md) | 소통 메시지함 · 1:1 실시간 채팅(Socket.IO) · 받은픽 리스트 · 프리미엄 게이팅 · 프로필 모달 — 데이터 모델/API/FSD 구조/Phase 플랜 (계획만, 미구현) |
+| [받은 픽 기능 전략](received-picks-plan.md) | 소통 메시지함 · 1:1 실시간 채팅(Socket.IO) · 받은픽 리스트 · 프리미엄 게이팅 · 프로필 모달 — 데이터 모델/API/FSD 구조/Phase 플랜 (사전 설계) |
+| [받은 픽 기능 구현 정리](received-picks-implementation.md) | 위 계획의 **실제 구현 기록**(P-A~P-G). 프론트 관점 API 계약·FSD 구조·실시간 채팅 동작·디버깅 메모 |
 
 ## 🛠 백엔드 학습 노트 (`apps/backend/docs/`)
 
