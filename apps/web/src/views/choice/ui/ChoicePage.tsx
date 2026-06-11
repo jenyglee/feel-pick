@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getChoiceFeed, type ChoiceFeed } from '@/entities/choice';
 import { ProfileCard, ProfileDetail } from '@/entities/profile';
+import { getViewer } from '@/entities/viewer';
 import {
   reshuffleFeed,
   RESHUFFLE_LIMIT,
@@ -15,6 +16,7 @@ import {
   IcHome24 as RefreshIcon,
 } from '@/shared/ui/icons';
 import { BottomNav } from '@/widgets/bottom-nav';
+import { PhotoUpsellPopup } from '@/widgets/photo-upsell-popup';
 
 export function ChoicePage() {
   const [feed, setFeed] = useState<ChoiceFeed | null>(null);
@@ -25,6 +27,23 @@ export function ChoicePage() {
   // 피드가 바뀔 때마다 +1. 카드 key에 넣어 매 라운드 새 인스턴스로 마운트한다.
   // (날린 카드의 모션값 x=500/opacity=0 이 같은 id 재등장 시 남아 "누락"되는 것 방지)
   const [round, setRound] = useState(0);
+  const [showPhotoUpsell, setShowPhotoUpsell] = useState(false);
+
+  // 가입 직후(?welcome=1) + 사진 미등록이면 업로드 유도 팝업을 한 번 띄운다.
+  // (URL의 welcome 플래그는 새로고침 재노출 방지를 위해 제거)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('welcome') !== '1') return;
+    window.history.replaceState(null, '', window.location.pathname);
+    let active = true;
+    void (async () => {
+      const { data } = await getViewer();
+      if (active && data && !data.photoUrl) setShowPhotoUpsell(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // setState는 모두 await 이후에 (마운트 effect에서 동기 setState 경고 방지).
   // 로딩 표시가 필요한 호출부(버튼)는 직접 setLoading(true) 후 호출한다.
@@ -174,6 +193,10 @@ export function ChoicePage() {
       </div>
 
       <BottomNav />
+
+      {showPhotoUpsell && (
+        <PhotoUpsellPopup onClose={() => setShowPhotoUpsell(false)} />
+      )}
     </div>
   );
 }

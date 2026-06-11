@@ -196,3 +196,12 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-display);
 }
+
+/* 스크롤바 숨김(휠 피커 등). 스크롤 기능은 유지. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

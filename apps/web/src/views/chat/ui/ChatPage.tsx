@@ -7,8 +7,8 @@ import {
   getMessages,
   type Message,
 } from '@/entities/conversation';
+import { getViewer } from '@/entities/viewer';
 import { MessageComposer } from '@/features/message/message-send';
-import { VIEWER_ID } from '@/shared/config/viewer';
 import { joinConversation, onChatMessage } from '@/shared/realtime';
 
 function formatTime(iso: string): string {
@@ -23,17 +23,20 @@ function formatTime(iso: string): string {
 export function ChatPage({ conversationId }: { conversationId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [partnerName, setPartnerName] = useState('채팅');
+  const [myId, setMyId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [msgs, convs] = await Promise.all([
+      const [msgs, convs, viewer] = await Promise.all([
         getMessages(conversationId),
         getConversations(),
+        getViewer(),
       ]);
       if (!active) return;
       if (msgs.data) setMessages(msgs.data);
+      if (viewer.data) setMyId(viewer.data.id);
       const conv = convs.data?.find((c) => c.id === conversationId);
       if (conv) setPartnerName(conv.partner.displayName);
     })();
@@ -73,7 +76,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
           </p>
         )}
         {messages.map((m) => {
-          const mine = m.senderId === VIEWER_ID;
+          const mine = m.senderId === myId;
           return (
             <div
               key={m.id}
