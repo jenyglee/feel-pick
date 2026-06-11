@@ -1,14 +1,20 @@
 import { Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { DevUserGuard } from '../common/dev-user/dev-user.guard';
 import User from '../users/entities/user.entity';
 import Viewer from './entities/viewer.entity';
 import { ViewerService } from './viewer.service';
 
 @ApiTags('viewer')
 @Controller('viewer')
-@UseGuards(DevUserGuard)
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ViewerController {
   constructor(private readonly service: ViewerService) {}
 

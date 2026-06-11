@@ -48,13 +48,14 @@ describe('실시간 채팅 게이트웨이 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let url: string;
+  let tokenFor: (id: string) => string;
   let aId: string;
   let conversationId: string;
   let meSocket: Socket;
   let aSocket: Socket;
 
   beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
+    ({ app, prisma, tokenFor } = await createTestApp());
     await app.listen(0);
     const port = (app.getHttpServer().address() as AddressInfo).port;
     url = `http://localhost:${port}/chat`;
@@ -67,15 +68,10 @@ describe('실시간 채팅 게이트웨이 (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
     await prisma.user.create({
-      data: {
-        id: ME,
-        email: 'me@test.dev',
-        passwordHash: 'x',
-        displayName: '나',
-      },
+      data: { id: ME, phone: '01030000000', displayName: '나' },
     });
     const a = await prisma.user.create({
-      data: { email: 'a@test.dev', passwordHash: 'x', displayName: 'A' },
+      data: { phone: '01030000001', displayName: 'A' },
     });
     aId = a.id;
     const conv = await prisma.conversation.create({
@@ -90,8 +86,14 @@ describe('실시간 채팅 게이트웨이 (e2e)', () => {
   });
 
   it('한쪽이 보낸 메시지가 상대에게 실시간으로 도착하고 DB에 저장된다', async () => {
-    meSocket = io(url, { auth: { userId: ME }, transports: ['websocket'] });
-    aSocket = io(url, { auth: { userId: aId }, transports: ['websocket'] });
+    meSocket = io(url, {
+      auth: { token: tokenFor(ME) },
+      transports: ['websocket'],
+    });
+    aSocket = io(url, {
+      auth: { token: tokenFor(aId) },
+      transports: ['websocket'],
+    });
     await Promise.all([connected(meSocket), connected(aSocket)]);
 
     // 둘 다 같은 대화 room에 join (ACK 대기 → join 완료 보장)
@@ -118,7 +120,7 @@ describe('실시간 채팅 게이트웨이 (e2e)', () => {
   it('참여자가 아닌 대화 join은 예외를 받는다', async () => {
     // 나와 무관한 대화
     const other = await prisma.user.create({
-      data: { email: 'o@test.dev', passwordHash: 'x', displayName: 'O' },
+      data: { phone: '01030000009', displayName: 'O' },
     });
     const foreign = await prisma.conversation.create({
       data: {
@@ -127,7 +129,10 @@ describe('실시간 채팅 게이트웨이 (e2e)', () => {
       },
     });
 
-    meSocket = io(url, { auth: { userId: ME }, transports: ['websocket'] });
+    meSocket = io(url, {
+      auth: { token: tokenFor(ME) },
+      transports: ['websocket'],
+    });
     await connected(meSocket);
 
     const err = waitFor(meSocket, 'exception');

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-// 상대 프로필로 노출할 필드 (passwordHash/email 제외).
+// 상대 프로필로 노출할 필드 (민감 필드(phone 등) 제외).
 const profileSelect = {
   id: true,
   displayName: true,

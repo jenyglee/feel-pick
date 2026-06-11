@@ -3,7 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const publicUserSelect = {
   id: true,
-  email: true,
+  phone: true,
+  birthday: true,
   displayName: true,
   isPremium: true,
   createdAt: true,
@@ -13,15 +14,18 @@ const publicUserSelect = {
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: { email: string; passwordHash: string; displayName: string }) {
+  create(data: { phone: string; displayName: string; birthday?: Date | null }) {
     return this.prisma.user.create({
       data,
       select: publicUserSelect,
     });
   }
 
-  findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+  findByPhone(phone: string) {
+    return this.prisma.user.findUnique({
+      where: { phone },
+      select: publicUserSelect,
+    });
   }
 
   findById(id: string) {

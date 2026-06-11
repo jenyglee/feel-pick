@@ -8,9 +8,12 @@ const ME = '11111111-1111-4111-8111-111111111111';
 describe('받은픽 / 프리미엄 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let auth: string;
 
   beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
+    let tokenFor: (id: string) => string;
+    ({ app, prisma, tokenFor } = await createTestApp());
+    auth = `Bearer ${tokenFor(ME)}`;
   });
 
   afterAll(async () => {
@@ -20,31 +23,19 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
 
-    const passwordHash = 'x';
     await prisma.user.create({
       data: {
         id: ME,
-        email: 'me@test.dev',
-        passwordHash,
+        phone: '01011111111',
         displayName: '나',
         isPremium: false,
       },
     });
     const a = await prisma.user.create({
-      data: {
-        email: 'a@test.dev',
-        passwordHash,
-        displayName: 'A',
-        photoUrl: 'photo-a',
-      },
+      data: { phone: '01022222222', displayName: 'A', photoUrl: 'photo-a' },
     });
     const b = await prisma.user.create({
-      data: {
-        email: 'b@test.dev',
-        passwordHash,
-        displayName: 'B',
-        photoUrl: 'photo-b',
-      },
+      data: { phone: '01033333333', displayName: 'B', photoUrl: 'photo-b' },
     });
     const q1 = await prisma.question.create({ data: { text: 'Q1' } });
     const q2 = await prisma.question.create({ data: { text: 'Q2' } });
@@ -66,7 +57,7 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('비프리미엄: 나를 픽한 사람 목록 + Top3, 사진은 가려진다', async () => {
     const res = await request(app.getHttpServer())
       .get('/received-picks')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     expect(res.body.total).toBe(3);
@@ -86,13 +77,13 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('프리미엄 구독 후엔 사진이 공개된다', async () => {
     const me = await request(app.getHttpServer())
       .post('/viewer/premium')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(201);
     expect(me.body.isPremium).toBe(true);
 
     const res = await request(app.getHttpServer())
       .get('/received-picks')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     const itemA = res.body.items.find(
@@ -105,7 +96,7 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('GET /viewer 는 현재 유저와 프리미엄 여부를 반환한다', async () => {
     const res = await request(app.getHttpServer())
       .get('/viewer')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     expect(res.body).toMatchObject({ displayName: '나', isPremium: false });

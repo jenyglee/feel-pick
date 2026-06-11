@@ -9,11 +9,11 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.VarChar(36)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @db.VarChar(255)
-  displayName  String   @db.VarChar(50)
-  createdAt    DateTime @default(now())
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  phone       String    @unique @db.VarChar(20)
+  birthday    DateTime? @db.Date
+  displayName String    @db.VarChar(50)
+  createdAt   DateTime  @default(now())
 
   // 프로필(초이스 카드 표시용)
   photoUrl   String? @db.VarChar(500)
@@ -32,6 +32,18 @@ model User {
   conversationsA Conversation[] @relation("userA")
   conversationsB Conversation[] @relation("userB")
   messages       Message[]
+}
+
+// 전화번호 OTP 인증 코드(개발용 목). request-otp 시 생성, verify-otp 시 verified.
+model PhoneVerification {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  phone     String   @db.VarChar(20)
+  code      String   @db.VarChar(6)
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
 }
 
 // 카드 위에 제시되는 질문(타이틀). 예: "술 잘 먹을 것 같은 친구"

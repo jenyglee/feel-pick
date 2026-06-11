@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import Profile from './entities/profile.entity';
 
-// 카드에 노출할 프로필 필드만 선택 (passwordHash/email 제외).
+// 카드에 노출할 프로필 필드만 선택 (민감 필드(phone 등) 제외).
 const profileSelect = {
   id: true,
   displayName: true,

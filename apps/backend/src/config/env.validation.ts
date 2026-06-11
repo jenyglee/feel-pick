@@ -41,6 +41,11 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   JWT_EXPIRES_IN: string = '1d';
+
+  @IsInt()
+  @Min(30)
+  @IsOptional()
+  OTP_TTL_SECONDS: number = 300;
 }
 
 export function validateEnv(

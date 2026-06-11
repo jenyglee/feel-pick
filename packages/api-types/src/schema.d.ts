@@ -20,6 +20,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/request-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 전화번호로 인증번호(OTP) 발급 — 목 OTP */
+        post: operations["AuthController_requestOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 인증번호 검증 — 기존 유저면 토큰, 신규면 가입 진행 신호 */
+        post: operations["AuthController_verifyOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/signup": {
         parameters: {
             query?: never;
@@ -29,25 +63,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign up with email + password + displayName */
+        /** 인증 완료 후 생일·닉네임으로 회원가입 */
         post: operations["AuthController_signup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Log in with email + password */
-        post: operations["AuthController_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -61,7 +78,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the currently authenticated user */
+        /** 현재 인증된 유저 조회 */
         get: operations["AuthController_me"];
         put?: never;
         post?: never;
@@ -102,7 +119,7 @@ export interface paths {
         put?: never;
         /**
          * 카드 선택 기록 후 다음 피드 반환
-         * @description "나"(임시 유저)를 selector로 기록 → 받은픽 데이터의 출처.
+         * @description 로그인한 "나"를 selector로 기록 → 받은픽 데이터의 출처.
          */
         post: operations["ChoiceController_select"];
         delete?: never;
@@ -222,34 +239,69 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RequestOtpDto: {
+            /**
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
+             */
+            phone: string;
+        };
+        RequestOtpResponseDto: {
+            /**
+             * @description 개발 환경에서만 채워지는 인증번호(목 OTP). 운영에선 null.
+             * @example 123456
+             */
+            devCode: string | null;
+        };
+        VerifyOtpDto: {
+            /**
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
+             */
+            phone: string;
+            /**
+             * @description 6자리 인증번호
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyOtpResponseDto: {
+            /** @description 기존 유저면 발급된 토큰, 신규 유저면 null(가입 진행 필요). */
+            accessToken: string | null;
+            /** @description 가입 이력이 없는 신규 유저인지 여부. */
+            isNewUser: boolean;
+        };
         SignupDto: {
             /**
-             * Format: email
-             * @example user@example.com
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
              */
-            email: string;
-            /** @example P@ssw0rd! */
-            password: string;
-            /** @example Jane */
-            displayName: string;
+            phone: string;
+            /**
+             * Format: date
+             * @description 생년월일 (ISO 날짜)
+             * @example 2000-09-20
+             */
+            birthday: string;
+            /** @example 아니근데옥지얌 */
+            nickname: string;
         };
         TokenResponseDto: {
             accessToken: string;
         };
-        LoginDto: {
-            /**
-             * Format: email
-             * @example user@example.com
-             */
-            email: string;
-            /** @example P@ssw0rd! */
-            password: string;
-        };
         User: {
             /** Format: uuid */
             id: string;
-            /** Format: email */
-            email: string;
+            /**
+             * @description 전화번호(정규화된 숫자만)
+             * @example 01012345678
+             */
+            phone: string;
+            /**
+             * Format: date
+             * @description 생년월일
+             */
+            birthday: string | null;
             displayName: string;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
@@ -421,6 +473,52 @@ export interface operations {
             };
         };
     };
+    AuthController_requestOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestOtpDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOtpResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_verifyOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyOtpDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyOtpResponseDto"];
+                };
+            };
+        };
+    };
     AuthController_signup: {
         parameters: {
             query?: never;
@@ -431,29 +529,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SignupDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TokenResponseDto"];
-                };
-            };
-        };
-    };
-    AuthController_login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginDto"];
             };
         };
         responses: {

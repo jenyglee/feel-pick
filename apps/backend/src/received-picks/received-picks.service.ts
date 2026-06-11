@@ -40,8 +40,8 @@ export class ReceivedPicksService {
    */
   async getReceivedPicks(viewer: User): Promise<ReceivedPicks> {
     const [rows, total] = await Promise.all([
-      this.repo.findReceivedFromSelectors(viewer.id),
-      this.repo.countReceived(viewer.id),
+      this.repo.findReceivedFromSelectors(viewer.id), // 나를 픽한 selection들(식별된 사람만), 최신순
+      this.repo.countReceived(viewer.id), // 내가 받은 총 픽 수(익명 포함)
     ]);
 
     // selector별 distinct — 최신순이므로 처음 본 것(가장 최근 픽)을 대표로.

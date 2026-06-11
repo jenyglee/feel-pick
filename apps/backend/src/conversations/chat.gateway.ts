@@ -1,4 +1,6 @@
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -8,10 +10,8 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
-import {
-  DEV_USER_HEADER,
-  DEV_USER_ID,
-} from '../common/dev-user/dev-user.constant';
+import { JwtPayload } from '../auth/auth.service';
+import { EnvironmentVariables } from '../config/env.validation';
 import { UsersRepository } from '../users/users.repository';
 import { ConversationsService } from './conversations.service';
 
@@ -23,8 +23,7 @@ function room(conversationId: string): string {
 
 /**
  * 1:1 실시간 채팅 게이트웨이 (namespace `/chat`).
- * - 인증은 임시: 핸드셰이크의 auth.userId / `x-user-id` 헤더 / query.userId,
- *   없으면 고정 시드 유저(DEV_USER_ID). 진짜 로그인 도입 시 이 부분을 가드로 교체.
+ * - 인증: 핸드셰이크의 `auth.token`(JWT)을 검증해 sub(userId)를 얻는다.
  * - 메시지는 DB 영속 후 room에 브로드캐스트.
  */
 @WebSocketGateway({ namespace: '/chat', cors: { origin: true } })
@@ -34,16 +33,21 @@ export class ChatGateway implements OnGatewayConnection {
   constructor(
     private readonly conversations: ConversationsService,
     private readonly users: UsersRepository,
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
 
+  // 입장 검문소 - 핸드셰이크 토큰 검증 → DB 조회 → 실패하면 연결 거부.
   async handleConnection(socket: Socket): Promise<void> {
-    const userId = this.extractUserId(socket);
-    const user = await this.users.findById(userId);
-    if (!user) {
-      this.logger.warn(`알 수 없는 유저 소켓 연결 거부: ${userId}`);
+    try {
+      const userId = this.extractUserId(socket);
+      const user = await this.users.findById(userId);
+      if (!user) throw new Error('unknown user');
+    } catch {
+      this.logger.warn('소켓 인증 실패 — 연결 거부');
       socket.disconnect(true);
     }
-    // 주: 핸들러는 socket.data가 아니라 매번 핸드셰이크에서 userId를 추출한다.
+    // 주: 핸들러는 socket.data가 아니라 매번 핸드셰이크 토큰에서 userId를 추출한다.
     //     (connect 직후 들어온 메시지가 handleConnection 완료 전이어도 안전 — 레이스 방지)
   }
 
@@ -87,14 +91,16 @@ export class ChatGateway implements OnGatewayConnection {
   }
 
   private extractUserId(socket: Socket): string {
-    const auth = socket.handshake.auth as { userId?: string } | undefined;
-    const headerId = socket.handshake.headers[DEV_USER_HEADER];
-    const queryId = socket.handshake.query.userId;
-    return (
-      auth?.userId ||
-      (typeof headerId === 'string' ? headerId : undefined) ||
-      (typeof queryId === 'string' ? queryId : undefined) ||
-      DEV_USER_ID
-    );
+    const auth = socket.handshake.auth as { token?: string } | undefined;
+    const token = auth?.token;
+    if (!token) throw new WsException('인증 토큰이 없습니다.');
+    try {
+      const payload = this.jwt.verify<JwtPayload>(token, {
+        secret: this.config.get('JWT_SECRET', { infer: true }),
+      });
+      return payload.sub;
+    } catch {
+      throw new WsException('유효하지 않은 토큰입니다.');
+    }
   }
 }

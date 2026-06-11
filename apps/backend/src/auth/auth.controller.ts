@@ -9,9 +9,12 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import User from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
 import { SignupDto } from './dto/signup.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
@@ -19,27 +22,37 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // 회원가입/로그인은 무차별 대입 표적이라 전역(100/분)보다 훨씬 빡빡하게: 분당 5회.
+  // OTP 발급/검증/가입은 무차별 대입 표적이라 전역(100/분)보다 빡빡하게: 분당 5회.
+  @Post('request-otp')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({ summary: '전화번호로 인증번호(OTP) 발급 — 목 OTP' })
+  @ApiResponse({ status: 201, type: RequestOtpResponseDto })
+  requestOtp(@Body() dto: RequestOtpDto): Promise<RequestOtpResponseDto> {
+    return this.authService.requestOtp(dto);
+  }
+
+  @Post('verify-otp')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({
+    summary: '인증번호 검증 — 기존 유저면 토큰, 신규면 가입 진행 신호',
+  })
+  @ApiResponse({ status: 201, type: VerifyOtpResponseDto })
+  verifyOtp(@Body() dto: VerifyOtpDto): Promise<VerifyOtpResponseDto> {
+    return this.authService.verifyOtp(dto);
+  }
+
   @Post('signup')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: 'Sign up with email + password + displayName' })
+  @ApiOperation({ summary: '인증 완료 후 생일·닉네임으로 회원가입' })
   @ApiResponse({ status: 201, type: TokenResponseDto })
   signup(@Body() dto: SignupDto): Promise<TokenResponseDto> {
     return this.authService.signup(dto);
   }
 
-  @Post('login')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: 'Log in with email + password' })
-  @ApiResponse({ status: 201, type: TokenResponseDto })
-  login(@Body() dto: LoginDto): Promise<TokenResponseDto> {
-    return this.authService.login(dto);
-  }
-
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get the currently authenticated user' })
+  @ApiOperation({ summary: '현재 인증된 유저 조회' })
   @ApiResponse({ status: 200, type: User })
   me(@CurrentUser() user: User): User {
     return user;

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import Viewer from './entities/viewer.entity';
 
-// Viewer 응답에 필요한 필드만 선택 (passwordHash/email 제외).
+// Viewer 응답에 필요한 필드만 선택 (민감 필드(phone 등) 제외).
 const viewerSelect = {
   id: true,
   displayName: true,
