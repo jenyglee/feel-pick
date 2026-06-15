@@ -65,8 +65,15 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 - 도메인마다 모듈 1개(`X.module.ts`)로 controller/service/repository 묶기.
 
 ### 4.2 파일·네이밍 규칙
-- 파일: **kebab-case + 역할 접미사** — `picks.controller.ts`, `picks.service.ts`, `picks.repository.ts`, `picks.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.guard.ts`, `*.strategy.ts`, `*.decorator.ts`, `*.filter.ts`.
+- 파일: **kebab-case + 역할 접미사** — `picks.controller.ts`, `picks.service.ts`, `picks.repository.ts`, `picks.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.guard.ts`, `*.strategy.ts`, `*.decorator.ts`, `*.filter.ts`, `*.util.ts`.
 - 클래스: PascalCase. 도메인 폴더 단위(`src/picks/`, `src/auth/`, `src/users/`).
+- **역할별 하위폴더**: 도메인 루트에는 그 도메인의 핵심 4종(`*.controller/service/repository/module.ts`)만 평면에 둔다. 그 외 역할 파일은 **복수형 역할 폴더**로 묶는다 — `dto/`, `entities/`, `guards/`, `strategies/`, `util/`. (controller와 같은 평면에 util/guard 등을 흩뿌리지 말 것.)
+
+#### util(순수 헬퍼) 배치 규칙
+- **util의 정의**: NestJS DI 없음(`@Injectable` ✕), DB 접근 없음, 부수효과 없음 — **입력→출력 순수 함수**만. DI·비즈니스 규칙·예외가 필요하면 util이 아니라 **service**다.
+- **한 도메인 전용** util → `src/<도메인>/util/<x>.util.ts` (예: `src/auth/util/phone.util.ts`).
+- **2개 이상 도메인** 공용 util → `src/common/util/<x>.util.ts`.
+- **승급 규칙**: 도메인 전용으로 시작했다가 두 번째 도메인이 쓰게 되면 그때 `common/util/`로 옮긴다 (미리 공용화 ✕ — 프론트 FSD의 "공통이 필요하면 아래로 내린다"와 같은 철학).
 
 ### 4.3 DTO vs Entity (중요)
 - **DTO** (`dto/*.dto.ts`): 클라이언트 **입력**. `class-validator` 데코레이터(`@IsString` 등) + `@ApiProperty`. **named export** (`export class CreatePickDto`).

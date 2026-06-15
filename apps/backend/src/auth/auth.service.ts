@@ -15,7 +15,7 @@ import { TokenResponseDto } from './dto/token-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto';
 import { PhoneVerificationRepository } from './phone-verification.repository';
-import { normalizePhone } from './phone.util';
+import { normalizePhone } from './util/phone.util';
 
 const OTP_LENGTH = 6;
 
@@ -50,6 +50,7 @@ export class AuthService {
   async verifyOtp(dto: VerifyOtpDto): Promise<VerifyOtpResponseDto> {
     const phone = normalizePhone(dto.phone);
     const record = await this.verifications.findLatestValid(phone);
+
     if (!record || record.code !== dto.code) {
       throw new UnauthorizedException(
         '인증번호가 올바르지 않거나 만료되었습니다.',
