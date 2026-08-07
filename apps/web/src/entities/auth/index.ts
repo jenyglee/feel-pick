@@ -6,4 +6,7 @@ export type {
   RequestOtpResponse,
   VerifyOtpResponse,
   TokenResponse,
+  Gender,
+  SignupInput,
+  TermsAgreement,
 } from './model/session';

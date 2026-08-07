@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { requestOtp } from '@/entities/auth';
+import { apiErrorMessage } from '@/shared/api';
 
-// 화면2: 전화번호 입력 + "본인인증" → OTP 발급.
+// 화면2: 전화번호 입력 + "본인인증" → OTP 발급/문자 발송.
 export function PhoneLoginForm({
   disabled,
   onRequested,
@@ -23,7 +24,13 @@ export function PhoneLoginForm({
     const { data, error: err } = await requestOtp(value);
     setLoading(false);
     if (err || !data) {
-      setError('인증번호 발급에 실패했어요. 잠시 후 다시 시도해주세요.');
+      // 서버가 준 이유(발송 실패·형식 오류·요청 과다)를 그대로 보여준다.
+      setError(
+        apiErrorMessage(
+          err,
+          '인증번호 발급에 실패했어요. 잠시 후 다시 시도해주세요.',
+        ),
+      );
       return;
     }
     onRequested(value, data.devCode);
@@ -52,7 +59,7 @@ export function PhoneLoginForm({
           disabled={disabled || !phone.trim() || loading}
           className="shrink-0 rounded-xl bg-blue-500 px-4 py-3.5 text-sm font-bold text-white disabled:opacity-40"
         >
-          본인인증
+          {loading ? '전송 중…' : '본인인증'}
         </button>
       </div>
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}

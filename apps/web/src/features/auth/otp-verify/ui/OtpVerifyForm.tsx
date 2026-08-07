@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { verifyOtp, type VerifyOtpResponse } from '@/entities/auth';
+import { apiErrorMessage } from '@/shared/api';
 
 // 화면3: 인증번호 입력 + "인증 완료" → 검증 결과를 위로 전달.
 export function OtpVerifyForm({
@@ -25,7 +26,7 @@ export function OtpVerifyForm({
     const { data, error: err } = await verifyOtp(phone, value);
     setLoading(false);
     if (err || !data) {
-      setError('인증번호가 올바르지 않거나 만료되었어요.');
+      setError(apiErrorMessage(err, '인증번호가 올바르지 않거나 만료되었어요.'));
       return;
     }
     onVerified(data);

@@ -2,29 +2,85 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { signup } from '@/entities/auth';
+import { signup, type Gender } from '@/entities/auth';
 import { BirthdayPicker } from '@/features/auth/onboarding-birthday';
+import { GenderSelect } from '@/features/auth/onboarding-gender';
 import { NicknameForm } from '@/features/auth/onboarding-nickname';
+import { ProfileDetailsForm } from '@/features/auth/onboarding-profile';
+import { PhotoUploadForm } from '@/features/auth/onboarding-photo';
+import { TermsAgreementForm } from '@/features/auth/onboarding-terms';
 import { OtpVerifyForm } from '@/features/auth/otp-verify';
 import { PhoneLoginForm } from '@/features/auth/phone-login';
+import { apiErrorMessage } from '@/shared/api';
 import { setSession } from '@/shared/session';
 
-type Step = 'landing' | 'phone' | 'birthday' | 'nickname';
+/**
+ * 온보딩 순서.
+ *   landing → phone(+OTP) → [기존 유저면 여기서 홈]
+ *   → terms → birthday → gender → nickname → (가입 완료·토큰 획득)
+ *   → photo → profile → 홈
+ *
+ * 가입(signup)은 nickname 단계에서 끝난다. 사진·관심사는 그 뒤에 붙는 선택 단계라
+ * 중간에 이탈해도 계정은 이미 만들어져 있다.
+ */
+type Step =
+  | 'landing'
+  | 'phone'
+  | 'terms'
+  | 'birthday'
+  | 'gender'
+  | 'nickname'
+  | 'photo'
+  | 'profile';
 
-// 온보딩 마법사 호스트: 랜딩 → 전화/OTP → (신규)생일 → 닉네임.
 export function AuthPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('landing');
+
+  // 인증 단계
   const [phone, setPhone] = useState('');
   const [requested, setRequested] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
-  const [birthday, setBirthday] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  // 토큰을 쿠키에 심고 홈으로(가입 직후엔 사진 유도 팝업용 welcome 플래그).
-  const goHome = async (token: string, welcome = false) => {
-    await setSession(token);
+  // 가입 입력값
+  const [agreeMarketing, setAgreeMarketing] = useState(false);
+  const [birthday, setBirthday] = useState<string | null>(null);
+  const [gender, setGender] = useState<Gender | null>(null);
+
+  // 가입 이후
+  const [token, setToken] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
+
+  // 토큰을 쿠키에 심고 홈으로. 사진을 안 올렸으면 홈에서 유도 팝업을 띄운다.
+  const goHome = async (accessToken: string, welcome = false) => {
+    await setSession(accessToken);
     router.replace(welcome ? '/?welcome=1' : '/');
+  };
+
+  // 닉네임까지 받으면 가입 요청 → 토큰 확보 후 선택 단계(사진)로.
+  const submitSignup = async (nickname: string) => {
+    if (!birthday || !gender || submitting) return;
+    setSubmitting(true);
+    setSignupError(null);
+    const { data, error } = await signup({
+      phone,
+      birthday,
+      nickname,
+      gender,
+      agreeTerms: true,
+      agreePrivacy: true,
+      agreeMarketing,
+    });
+    setSubmitting(false);
+    if (error || !data) {
+      setSignupError(apiErrorMessage(error, '가입에 실패했어요. 다시 시도해주세요.'));
+      return;
+    }
+    setToken(data.accessToken);
+    setStep('photo');
   };
 
   if (step === 'landing') {
@@ -65,7 +121,7 @@ export function AuthPage() {
               devCode={devCode}
               onVerified={async (result) => {
                 if (result.isNewUser) {
-                  setStep('birthday');
+                  setStep('terms');
                 } else if (result.accessToken) {
                   await goHome(result.accessToken);
                 }
@@ -77,28 +133,71 @@ export function AuthPage() {
     );
   }
 
+  if (step === 'terms') {
+    return (
+      <TermsAgreementForm
+        onNext={({ agreeMarketing: marketing }) => {
+          setAgreeMarketing(marketing);
+          setStep('birthday');
+        }}
+      />
+    );
+  }
+
   if (step === 'birthday') {
     return (
       <BirthdayPicker
         onNext={(value) => {
           setBirthday(value);
+          setStep('gender');
+        }}
+      />
+    );
+  }
+
+  if (step === 'gender') {
+    return (
+      <GenderSelect
+        onNext={(value) => {
+          setGender(value);
           setStep('nickname');
         }}
       />
     );
   }
 
+  if (step === 'nickname') {
+    return (
+      <NicknameForm
+        loading={submitting}
+        submitLabel="다음"
+        error={signupError}
+        onSubmit={submitSignup}
+      />
+    );
+  }
+
+  // 아래는 가입이 끝나 토큰이 있는 상태에서만 도달한다.
+  if (!token) return null;
+
+  if (step === 'photo') {
+    return (
+      <PhotoUploadForm
+        token={token}
+        onNext={(url) => {
+          setPhotoUrl(url);
+          setStep('profile');
+        }}
+        onSkip={() => setStep('profile')}
+      />
+    );
+  }
+
   return (
-    <NicknameForm
-      loading={submitting}
-      onSubmit={async (nickname) => {
-        if (!birthday || submitting) return;
-        setSubmitting(true);
-        const { data, error } = await signup({ phone, birthday, nickname });
-        setSubmitting(false);
-        if (error || !data) return;
-        await goHome(data.accessToken, true);
-      }}
+    <ProfileDetailsForm
+      token={token}
+      photoUrl={photoUrl}
+      onDone={() => goHome(token, !photoUrl)}
     />
   );
 }

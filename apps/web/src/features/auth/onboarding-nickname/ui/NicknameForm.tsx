@@ -2,12 +2,17 @@
 
 import { useState } from 'react';
 
-// 화면5~6: 닉네임 입력 + "시작!"(빈값이면 비활성·회색, 채워지면 빨강).
+// 닉네임 입력 + 진행 버튼(빈값이면 비활성·회색, 채워지면 빨강).
 export function NicknameForm({
   loading,
+  submitLabel = '다음',
+  error,
   onSubmit,
 }: {
   loading?: boolean;
+  /** 진행 버튼 문구. 온보딩 위치에 따라 '다음'/'시작!'으로 쓴다. */
+  submitLabel?: string;
+  error?: string | null;
   onSubmit: (nickname: string) => void;
 }) {
   const [nickname, setNickname] = useState('');
@@ -28,6 +33,7 @@ export function NicknameForm({
           placeholder="닉네임을 입력해주세요"
           className="mt-6 w-full rounded-xl bg-gray-100 px-4 py-4 text-sm outline-none"
         />
+        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
       </div>
 
       <div className="mt-auto p-4">
@@ -41,7 +47,7 @@ export function NicknameForm({
               : 'bg-gray-100 text-gray-400'
           }`}
         >
-          시작!
+          {loading ? '잠시만요…' : submitLabel}
         </button>
       </div>
     </div>
