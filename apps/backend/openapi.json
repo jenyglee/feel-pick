@@ -111,6 +111,63 @@
         ]
       }
     },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "액세스 토큰 재발급 (리프레시 토큰 회전)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "폐기 완료"
+          }
+        },
+        "summary": "로그아웃 — 건네받은 리프레시 토큰만 폐기(멱등)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/me": {
       "get": {
         "operationId": "AuthController_me",
@@ -763,6 +820,11 @@
             "nullable": true,
             "description": "기존 유저면 발급된 토큰, 신규 유저면 null(가입 진행 필요)."
           },
+          "refreshToken": {
+            "type": "string",
+            "nullable": true,
+            "description": "기존 유저면 리프레시 토큰, 신규 유저면 null."
+          },
           "isNewUser": {
             "type": "boolean",
             "description": "가입 이력이 없는 신규 유저인지 여부."
@@ -770,6 +832,7 @@
         },
         "required": [
           "accessToken",
+          "refreshToken",
           "isNewUser"
         ]
       },
@@ -838,11 +901,30 @@
         "type": "object",
         "properties": {
           "accessToken": {
-            "type": "string"
+            "type": "string",
+            "description": "짧게 사는 액세스 토큰(JWT). 기본 15분."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "액세스 토큰 재발급용 리프레시 토큰. 재발급 시마다 새 값으로 회전한다."
           }
         },
         "required": [
-          "accessToken"
+          "accessToken",
+          "refreshToken"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "발급받은 리프레시 토큰 원문(64자 hex)",
+            "example": "a3f9c1..."
+          }
+        },
+        "required": [
+          "refreshToken"
         ]
       },
       "User": {

@@ -71,6 +71,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 액세스 토큰 재발급 (리프레시 토큰 회전) */
+        post: operations["AuthController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 로그아웃 — 건네받은 리프레시 토큰만 폐기(멱등) */
+        post: operations["AuthController_logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me": {
         parameters: {
             query?: never;
@@ -302,6 +336,8 @@ export interface components {
         VerifyOtpResponseDto: {
             /** @description 기존 유저면 발급된 토큰, 신규 유저면 null(가입 진행 필요). */
             accessToken: string | null;
+            /** @description 기존 유저면 리프레시 토큰, 신규 유저면 null. */
+            refreshToken: string | null;
             /** @description 가입 이력이 없는 신규 유저인지 여부. */
             isNewUser: boolean;
         };
@@ -340,7 +376,17 @@ export interface components {
             agreeMarketing: boolean;
         };
         TokenResponseDto: {
+            /** @description 짧게 사는 액세스 토큰(JWT). 기본 15분. */
             accessToken: string;
+            /** @description 액세스 토큰 재발급용 리프레시 토큰. 재발급 시마다 새 값으로 회전한다. */
+            refreshToken: string;
+        };
+        RefreshDto: {
+            /**
+             * @description 발급받은 리프레시 토큰 원문(64자 hex)
+             * @example a3f9c1...
+             */
+            refreshToken: string;
         };
         User: {
             /** Format: uuid */
@@ -635,6 +681,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenResponseDto"];
                 };
+            };
+        };
+    };
+    AuthController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshDto"];
+            };
+        };
+        responses: {
+            /** @description 폐기 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
