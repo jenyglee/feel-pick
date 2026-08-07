@@ -67,7 +67,8 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 ### 4.2 파일·네이밍 규칙
 - 파일: **kebab-case + 역할 접미사** — `picks.controller.ts`, `picks.service.ts`, `picks.repository.ts`, `picks.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.guard.ts`, `*.strategy.ts`, `*.decorator.ts`, `*.filter.ts`, `*.util.ts`.
 - 클래스: PascalCase. 도메인 폴더 단위(`src/picks/`, `src/auth/`, `src/users/`).
-- **역할별 하위폴더**: 도메인 루트에는 그 도메인의 핵심 4종(`*.controller/service/repository/module.ts`)만 평면에 둔다. 그 외 역할 파일은 **복수형 역할 폴더**로 묶는다 — `dto/`, `entities/`, `guards/`, `strategies/`, `util/`. (controller와 같은 평면에 util/guard 등을 흩뿌리지 말 것.)
+- **역할별 하위폴더**: 도메인 루트에는 그 도메인의 핵심 4종(`*.controller/service/repository/module.ts`)만 평면에 둔다. 그 외 역할 파일은 **복수형 역할 폴더**로 묶는다 — `dto/`, `entities/`, `guards/`, `strategies/`, `providers/`, `util/`. (controller와 같은 평면에 util/guard 등을 흩뿌리지 말 것.)
+- **`providers/`**: 외부 서비스 어댑터(SMS 제공자 등). service는 이 어댑터만 알고, "어떤 업체를 쓰는지"는 어댑터 안에 가둔다. 예: `src/sms/providers/solapi.provider.ts`.
 
 #### util(순수 헬퍼) 배치 규칙
 - **util의 정의**: NestJS DI 없음(`@Injectable` ✕), DB 접근 없음, 부수효과 없음 — **입력→출력 순수 함수**만. DI·비즈니스 규칙·예외가 필요하면 util이 아니라 **service**다.
