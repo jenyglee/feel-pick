@@ -46,6 +46,23 @@ model User {
   conversationsA Conversation[] @relation("userA")
   conversationsB Conversation[] @relation("userB")
   messages       Message[]
+
+  refreshTokens RefreshToken[]
+}
+
+// 액세스 토큰 재발급용 리프레시 토큰.
+// 평문이 아니라 SHA-256 해시로 저장한다 — DB가 새도 토큰을 되살릴 수 없게.
+// 재발급 시마다 옛 토큰을 revoke하고 새로 발급한다(회전, rotation).
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String    @db.VarChar(36)
+  tokenHash String    @unique @db.VarChar(64)
+  expiresAt DateTime
+  revokedAt DateTime? // 회전으로 폐기됐거나 로그아웃된 시각
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // 전화번호 OTP 인증 코드(개발용 목). request-otp 시 생성, verify-otp 시 verified.

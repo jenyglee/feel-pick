@@ -38,9 +38,16 @@ export class EnvironmentVariables {
   @MinLength(16)
   JWT_SECRET: string;
 
+  /** 액세스 토큰 수명. 짧게 유지하고 만료는 리프레시 토큰으로 메운다. */
   @IsString()
   @IsOptional()
-  JWT_EXPIRES_IN: string = '1d';
+  JWT_EXPIRES_IN: string = '15m';
+
+  /** 리프레시 토큰 수명(일). 이 기간 동안은 재로그인 없이 세션이 이어진다. */
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  REFRESH_TOKEN_TTL_DAYS: number = 14;
 
   @IsInt()
   @Min(30)

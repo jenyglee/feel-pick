@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -9,6 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import User from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
+import { RefreshDto } from './dto/refresh.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -52,6 +60,26 @@ export class AuthController {
   @ApiResponse({ status: 201, type: TokenResponseDto })
   signup(@Body() dto: SignupDto): Promise<TokenResponseDto> {
     return this.authService.signup(dto);
+  }
+
+  // 액세스 토큰이 만료되면 프론트가 401을 받고 이 엔드포인트로 재발급받는다.
+  // 회전 방식이라 응답의 refreshToken도 매번 새 값이며, 옛 값은 즉시 죽는다.
+  @Post('refresh')
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @ApiOperation({
+    summary: '액세스 토큰 재발급 (리프레시 토큰 회전)',
+  })
+  @ApiResponse({ status: 201, type: TokenResponseDto })
+  refresh(@Body() dto: RefreshDto): Promise<TokenResponseDto> {
+    return this.authService.refresh(dto);
+  }
+
+  @Post('logout')
+  @HttpCode(204)
+  @ApiOperation({ summary: '로그아웃 — 건네받은 리프레시 토큰만 폐기(멱등)' })
+  @ApiResponse({ status: 204, description: '폐기 완료' })
+  logout(@Body() dto: RefreshDto): Promise<void> {
+    return this.authService.logout(dto);
   }
 
   @Get('me')

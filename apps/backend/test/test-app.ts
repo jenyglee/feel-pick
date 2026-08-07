@@ -38,5 +38,6 @@ export async function createTestApp(): Promise<E2EContext> {
 /** 모든 테이블 비우기. (User 삭제는 FK cascade로 관계 데이터까지 정리) */
 export async function resetDb(prisma: PrismaService): Promise<void> {
   await prisma.phoneVerification.deleteMany();
+  await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
 }

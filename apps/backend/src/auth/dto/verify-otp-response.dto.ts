@@ -8,6 +8,13 @@ export class VerifyOtpResponseDto {
   })
   accessToken: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '기존 유저면 리프레시 토큰, 신규 유저면 null.',
+  })
+  refreshToken: string | null;
+
   @ApiProperty({ description: '가입 이력이 없는 신규 유저인지 여부.' })
   isNewUser: boolean;
 }

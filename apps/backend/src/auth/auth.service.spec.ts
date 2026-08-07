@@ -6,6 +6,8 @@ import { SmsService } from '../sms/sms.service';
 import { UsersRepository } from '../users/users.repository';
 import { AuthService } from './auth.service';
 import { PhoneVerificationRepository } from './phone-verification.repository';
+import { RefreshTokenRepository } from './refresh-token.repository';
+import { hashRefreshToken } from './util/refresh-token.util';
 
 /** 가입 DTO 기본값 — 테스트마다 바꿀 필드만 덮어쓴다. */
 const signupInput = {
@@ -19,7 +21,9 @@ const signupInput = {
 
 describe('AuthService', () => {
   let service: AuthService;
-  let users: jest.Mocked<Pick<UsersRepository, 'findByPhone' | 'create'>>;
+  let users: jest.Mocked<
+    Pick<UsersRepository, 'findByPhone' | 'create' | 'findById'>
+  >;
   let verifications: jest.Mocked<
     Pick<
       PhoneVerificationRepository,
@@ -27,14 +31,26 @@ describe('AuthService', () => {
     >
   >;
   let sms: { sendOtp: jest.Mock; isLive: boolean };
+  let refreshTokens: jest.Mocked<
+    Pick<
+      RefreshTokenRepository,
+      'create' | 'findByHash' | 'revoke' | 'revokeAllForUser'
+    >
+  >;
 
   beforeEach(() => {
-    users = { findByPhone: jest.fn(), create: jest.fn() };
+    users = { findByPhone: jest.fn(), create: jest.fn(), findById: jest.fn() };
     verifications = {
       create: jest.fn(),
       findLatestValid: jest.fn(),
       markVerified: jest.fn(),
       findLatestVerified: jest.fn(),
+    };
+    refreshTokens = {
+      create: jest.fn(),
+      findByHash: jest.fn(),
+      revoke: jest.fn(),
+      revokeAllForUser: jest.fn(),
     };
     sms = { sendOtp: jest.fn().mockResolvedValue(undefined), isLive: false };
     const jwt = { sign: jest.fn().mockReturnValue('signed-token') };
@@ -44,7 +60,8 @@ describe('AuthService', () => {
           OTP_TTL_SECONDS: 300,
           NODE_ENV: 'development',
           JWT_SECRET: 'secret',
-          JWT_EXPIRES_IN: '1d',
+          JWT_EXPIRES_IN: '15m',
+          REFRESH_TOKEN_TTL_DAYS: 14,
         };
         return map[key];
       }),
@@ -52,6 +69,7 @@ describe('AuthService', () => {
     service = new AuthService(
       users as unknown as UsersRepository,
       verifications as unknown as PhoneVerificationRepository,
+      refreshTokens as unknown as RefreshTokenRepository,
       jwt as unknown as JwtService,
       config as unknown as ConfigService,
       sms as unknown as SmsService,
@@ -101,7 +119,16 @@ describe('AuthService', () => {
       });
 
       expect(verifications.markVerified).toHaveBeenCalledWith('v1');
-      expect(res).toEqual({ accessToken: 'signed-token', isNewUser: false });
+      expect(res.accessToken).toBe('signed-token');
+      expect(res.isNewUser).toBe(false);
+      // 리프레시 토큰은 원문을 주고, DB에는 해시로만 저장한다.
+      expect(res.refreshToken).toMatch(/^[0-9a-f]{64}$/);
+      expect(refreshTokens.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'u1',
+          tokenHash: hashRefreshToken(res.refreshToken!),
+        }),
+      );
     });
 
     it('코드 일치 + 신규 유저면 토큰 없이 isNewUser=true', async () => {
@@ -115,7 +142,12 @@ describe('AuthService', () => {
         phone: '01012345678',
         code: '123456',
       });
-      expect(res).toEqual({ accessToken: null, isNewUser: true });
+      expect(res).toEqual({
+        accessToken: null,
+        refreshToken: null,
+        isNewUser: true,
+      });
+      expect(refreshTokens.create).not.toHaveBeenCalled();
     });
 
     it('코드 불일치/만료면 401', async () => {
@@ -175,6 +207,95 @@ describe('AuthService', () => {
       expect(users.create).toHaveBeenCalledWith(
         expect.objectContaining({ marketingAgreedAt: null }),
       );
+    });
+  });
+
+  describe('refresh', () => {
+    const RAW = 'a'.repeat(64);
+    /** 살아있는 리프레시 토큰 레코드(만료 1일 남음). */
+    const alive = {
+      id: 'r1',
+      userId: 'u1',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    };
+
+    it('유효하면 옛 토큰을 폐기하고 새 쌍을 발급한다(회전)', async () => {
+      refreshTokens.findByHash.mockResolvedValue(alive as never);
+      users.findById.mockResolvedValue({ id: 'u1' } as never);
+
+      const res = await service.refresh({ refreshToken: RAW });
+
+      expect(refreshTokens.revoke).toHaveBeenCalledWith('r1');
+      expect(res.accessToken).toBe('signed-token');
+      // 새 토큰은 방금 쓴 값과 달라야 회전의 의미가 있다.
+      expect(res.refreshToken).toMatch(/^[0-9a-f]{64}$/);
+      expect(res.refreshToken).not.toBe(RAW);
+    });
+
+    it('없는 토큰이면 401', async () => {
+      refreshTokens.findByHash.mockResolvedValue(null);
+      await expect(
+        service.refresh({ refreshToken: RAW }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('만료된 토큰이면 401', async () => {
+      refreshTokens.findByHash.mockResolvedValue({
+        ...alive,
+        expiresAt: new Date(Date.now() - 1000),
+      } as never);
+
+      await expect(
+        service.refresh({ refreshToken: RAW }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(refreshTokens.revoke).not.toHaveBeenCalled();
+    });
+
+    it('이미 폐기된 토큰이 다시 오면 탈취로 보고 전체 세션을 폐기한다', async () => {
+      refreshTokens.findByHash.mockResolvedValue({
+        ...alive,
+        revokedAt: new Date(),
+      } as never);
+
+      await expect(
+        service.refresh({ refreshToken: RAW }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(refreshTokens.revokeAllForUser).toHaveBeenCalledWith('u1');
+    });
+
+    it('유저가 사라졌으면 401', async () => {
+      refreshTokens.findByHash.mockResolvedValue(alive as never);
+      users.findById.mockResolvedValue(null);
+
+      await expect(
+        service.refresh({ refreshToken: RAW }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('logout', () => {
+    const RAW = 'b'.repeat(64);
+
+    it('건네받은 토큰만 폐기한다', async () => {
+      refreshTokens.findByHash.mockResolvedValue({
+        id: 'r1',
+        revokedAt: null,
+      } as never);
+
+      await service.logout({ refreshToken: RAW });
+
+      expect(refreshTokens.revoke).toHaveBeenCalledWith('r1');
+      expect(refreshTokens.revokeAllForUser).not.toHaveBeenCalled();
+    });
+
+    it('없는 토큰이어도 조용히 성공한다(멱등)', async () => {
+      refreshTokens.findByHash.mockResolvedValue(null);
+
+      await expect(
+        service.logout({ refreshToken: RAW }),
+      ).resolves.toBeUndefined();
+      expect(refreshTokens.revoke).not.toHaveBeenCalled();
     });
   });
 });
