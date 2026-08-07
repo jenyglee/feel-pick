@@ -150,20 +150,26 @@ eyJhbGci...  .  eyJzdWIiOiIwMDAw...  .  nb4yuFlE...
 ## 4. 프론트 토큰 흐름 (코드로 보기)
 
 ### (a) 토큰 저장 — 서버 액션
-가입/로그인이 끝나면 받은 토큰을 쿠키에 심는다.
+가입/로그인이 끝나면 받은 **토큰 두 개**를 쿠키에 심는다. 성격이 달라 보관 방식도 다르다.
+
+| 쿠키 | 수명 | httpOnly | 왜 |
+|---|---|---|---|
+| `fp_token` (액세스) | 15분 | ✕ | 클라이언트 컴포넌트·소켓이 읽어 헤더에 실어야 한다 |
+| `fp_refresh` (리프레시) | 14일 | **✓** | 재발급에만 쓰이고 브라우저 JS는 읽을 일이 없다 → XSS가 나도 못 훔쳐간다 |
 
 ```ts
 // shared/session/setSession.ts
 'use server';
-import { cookies } from 'next/headers';
-import { TOKEN_COOKIE, TOKEN_MAX_AGE } from '@/shared/lib/token';
-
-export async function setSession(token: string) {
+export async function setSession(accessToken: string, refreshToken: string) {
   const store = await cookies();          // Next 16: cookies()는 async!
-  store.set(TOKEN_COOKIE, token, {
-    path: '/', sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: TOKEN_MAX_AGE,                 // 1일
+  const secure = process.env.NODE_ENV === 'production';
+
+  store.set(TOKEN_COOKIE, accessToken, {
+    path: '/', sameSite: 'lax', secure, maxAge: TOKEN_MAX_AGE,        // 15분
+  });
+  store.set(REFRESH_COOKIE, refreshToken, {
+    path: '/', sameSite: 'lax', secure, maxAge: REFRESH_MAX_AGE,      // 14일
+    httpOnly: true,                        // ← 브라우저 JS 접근 차단
   });
 }
 ```
@@ -193,11 +199,71 @@ api.use({
 
 > **FE가 알아야 할 것**: `import { api } from '@/shared/api'`로 호출하면 **토큰이 알아서 붙는다.** 예전 `x-user-id`처럼 신경 쓸 필요 없다.
 
-### (c) 로그인 게이팅 — proxy
+### (c) 만료되면 알아서 재발급 — 401 인터셉터
+
+액세스 토큰은 15분이면 죽는다. 그때마다 사용자를 로그인 화면으로 쫓아내지 않고, **API 클라이언트가 조용히 재발급받아 원래 요청을 한 번 더 보낸다.**
+
+```
+API 호출 → 401 → refreshSession() → 새 액세스 토큰 → 원래 요청 1회 재시도 → 성공
+                      ↓ 실패(리프레시도 만료/폐기)
+                 쿠키 삭제 → /auth 로 이동
+```
+
+```ts
+// shared/api/client.ts (요지)
+async function fetchWithRefresh(request: Request): Promise<Response> {
+  const retryable = request.clone();       // body는 한 번만 읽을 수 있다 → 사본 확보
+  const response = await fetch(request);
+
+  if (response.status !== 401 || typeof window === 'undefined') return response;
+  if (AUTH_PATHS.includes(new URL(request.url).pathname)) return response;  // 무한루프 방지
+
+  const accessToken = await refreshOnce();
+  if (!accessToken) { window.location.href = '/auth'; return response; }
+
+  const headers = new Headers(retryable.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  return fetch(new Request(retryable, { headers }));
+}
+```
+
+**놓치기 쉬운 함정 세 개**
+
+1. **재시도용 사본**: `Request`의 body는 한 번만 읽을 수 있다. 먼저 `clone()` 해두지 않으면 재시도할 때 body가 비어 있다.
+2. **재발급 요청 합치기**: 화면이 API를 동시에 여러 개 부르면 401도 동시에 터진다. 그때마다 재발급하면 토큰이 연쇄 회전하며 서로를 무효화하고, 결국 재사용 탐지에 걸려 **전체 로그아웃**된다. 그래서 진행 중인 재발급 하나를 모두가 공유한다.
+   ```ts
+   let inflightRefresh: Promise<string | null> | null = null;
+   function refreshOnce() {
+     inflightRefresh ??= refreshSession().finally(() => { inflightRefresh = null; });
+     return inflightRefresh;
+   }
+   ```
+3. **브라우저에서만**: 서버 렌더링 중에는 쿠키를 쓸 수 없어 재발급이 무의미하다. 그 경우 401을 그대로 호출부에 넘긴다.
+
+재발급 자체는 서버 액션이다 — 리프레시 쿠키가 httpOnly라 **브라우저 JS가 못 읽기 때문**이다.
+
+```ts
+// shared/session/refreshSession.ts (요지)
+'use server';
+export async function refreshSession(): Promise<string | null> {
+  const refreshToken = (await cookies()).get(REFRESH_COOKIE)?.value;
+  if (!refreshToken) return null;
+
+  const res = await fetch(`${API_BASE_URL}/auth/refresh`, { /* ... */ });
+  if (!res.ok) { /* 쿠키 삭제 */ return null; }
+
+  const { accessToken, refreshToken: rotated } = await res.json();
+  await setSession(accessToken, rotated);   // 회전됐으므로 둘 다 새로 심는다
+  return accessToken;
+}
+```
+> `api` 클라이언트 대신 `fetch`를 직접 쓴다 — `client.ts`가 401에서 이 함수를 부르는데 여기서 다시 `client.ts`를 쓰면 **순환 참조**가 된다.
+
+### (d) 로그인 게이팅 — proxy
 ```ts
 // src/proxy.ts (요지)
 export function proxy(request: NextRequest) {
-  const hasToken = Boolean(request.cookies.get(TOKEN_COOKIE)?.value);
+  const hasToken = Boolean(request.cookies.get(REFRESH_COOKIE)?.value);
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
 
   if (!hasToken && !isAuthRoute) return NextResponse.redirect(new URL('/auth', request.url));
@@ -205,9 +271,10 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 ```
-- 토큰 **존재 여부만** 본다(서명 검증 X — 빠른 1차 차단). 진짜 유효성은 각 API 요청이 백엔드에서 검증.
+- 쿠키 **존재 여부만** 본다(서명 검증 X — 빠른 1차 차단). 진짜 유효성은 각 API 요청이 백엔드에서 검증.
+- 보는 대상은 **액세스가 아니라 리프레시 쿠키**다. 액세스는 15분마다 사라지는데 그걸 기준으로 삼으면, 재발급으로 이어갈 수 있는 멀쩡한 세션까지 로그인 화면으로 쫓아낸다.
 
-### (d) 소켓도 토큰으로
+### (e) 소켓도 토큰으로
 실시간 채팅 소켓도 핸드셰이크에 토큰을 싣는다(예전엔 `userId`).
 
 ```ts
@@ -311,6 +378,8 @@ src/viewer/dto/update-profile.dto.ts  PATCH /viewer/profile 입력
 | POST | `/auth/request-otp` | 인증번호 발급 + 문자 발송 | `RequestOtpDto` / `RequestOtpResponseDto` |
 | POST | `/auth/verify-otp` | 인증번호 확인 | `VerifyOtpDto` / `VerifyOtpResponseDto` |
 | POST | `/auth/signup` | 가입(성별·약관 포함) | `SignupDto` / `TokenResponseDto` |
+| POST | `/auth/refresh` | 액세스 토큰 재발급(회전) | `RefreshDto` / `TokenResponseDto` |
+| POST | `/auth/logout` | 리프레시 토큰 폐기(204, 멱등) | `RefreshDto` / — |
 | GET | `/auth/me` | 토큰으로 내 정보 | (헤더) / `User` |
 | GET | `/viewer` | 현재 "나"(isPremium·photoUrl·bio·interests) | `Viewer` |
 | PATCH | `/viewer/profile` | 프로필 부분 수정 | `UpdateProfileDto` / `Viewer` |
@@ -341,6 +410,14 @@ if (data?.isNewUser) { /* 생일로 */ } else if (data?.accessToken) { /* 홈으
 | "약관은 boolean으로 저장?" | **동의 시각(DateTime)으로 저장.** 미동의는 `null`. |
 | "사진은 가입 요청에 같이 보내?" | **아니다.** 가입으로 토큰을 받은 뒤 `/uploads/photo` → `/viewer/profile` 순서. |
 | "업로드 응답 url을 `<img src>`에 바로?" | **상대 경로라 안 된다.** `assetUrl()`로 절대 URL을 만들어야 한다. |
+| "토큰 하나만 있는 거지?" | **두 개다.** 액세스(15분·읽기 가능)와 리프레시(14일·httpOnly). |
+| "리프레시 토큰도 JWT?" | **아니다, 그냥 난수.** JWT는 서명만 맞으면 유효해 취소가 안 된다. 난수는 DB에서 폐기하면 즉시 죽는다. |
+| "리프레시 토큰이 DB에 그대로 있겠네?" | **해시(SHA-256)로만 저장한다.** DB가 새도 토큰을 되살릴 수 없다. |
+| "재발급하면 리프레시는 그대로?" | **매번 새 값으로 회전한다.** 옛 값은 그 즉시 죽는다. |
+| "옛 리프레시 토큰을 또 쓰면 그냥 401?" | **그 유저의 세션이 전부 끊긴다.** 폐기된 토큰의 재등장 = 탈취 신호로 본다. |
+| "만료되면 로그인 화면으로 튕기지?" | **아니다.** 401을 받으면 API 클라가 조용히 재발급받아 재시도한다. 재발급까지 실패해야 `/auth`로 간다. |
+| "proxy는 액세스 쿠키를 보겠네?" | **리프레시 쿠키를 본다.** 액세스는 15분마다 사라져서 게이팅 기준이 될 수 없다. |
+| "로그아웃은 쿠키만 지우면 되지?" | 그러면 **서버의 토큰은 계속 살아있다.** `/auth/logout`으로 폐기까지 해야 한다. |
 | "예전 `x-user-id` 헤더 붙여?" | **삭제됨.** `api` 클라가 토큰 자동 첨부. |
 
 ---
@@ -365,9 +442,13 @@ if (data?.isNewUser) { /* 생일로 */ } else if (data?.accessToken) { /* 홈으
 
 ## 10. 검증 결과 (라이브 확인 완료)
 
-- `npm run lint` 0 errors · `npm test` 단위 33개 통과 · `npm run build` 통과 · `npm run test:e2e` 33개 통과.
+- `npm run lint` 0 errors · `npm test` 단위 40개 통과 · `npm run build` 통과 · `npm run test:e2e` 40개 통과.
 - 실서버 curl 확인: request-otp → verify-otp → signup(성별·약관) → 사진 업로드 → 정적 서빙(200, `Cross-Origin-Resource-Policy: cross-origin`) → `PATCH /viewer/profile` → `/auth/me`(gender 반영, passwordHash 없음). 약관 미동의 signup은 400.
+- **실 문자 발송 확인**: Solapi 연동 후 실제 SMS 수신 → 그 코드로 가입 완주.
+- **만료 → 재발급 라이브 확인** (액세스 2초짜리 인스턴스로): 발급 직후 `/auth/me` 200 → 3초 뒤 401 → `/auth/refresh` 재발급(리프레시 회전 확인) → 새 토큰으로 200 → 옛 리프레시 재사용 401 → 그 직후 최신 리프레시도 401(전 기기 폐기).
 - proxy 게이팅: `/`(쿠키없음)→307 `/auth`, `/auth` 렌더 OK, `/`(쿠키)→200, `/auth`(쿠키)→307 `/`.
+
+> **아직 라이브로 못 본 것**: 브라우저에서의 401 자동 재시도. 로직은 타입체크·빌드로만 확인했고, 실제 화면에서 15분을 넘겨 검증한 적은 없다.
 
 **데모 로그인**: 시드된 "나"는 `010-0000-0000`. 이 번호로 인증하면 기존 유저로 바로 로그인된다.
 
@@ -378,6 +459,6 @@ if (data?.isNewUser) { /* 생일로 */ } else if (data?.accessToken) { /* 홈으
 - **약관 전문 화면** — 지금은 체크박스만 있고 내용을 볼 링크/페이지가 없다.
 - **사진 저장소** — 지금은 컨테이너 로컬 디스크(+ Docker 볼륨). 다중 인스턴스로 가면 S3 등 외부 저장소 필요.
 - **사진 교체 시 옛 파일 삭제** — 현재는 계속 쌓인다.
-- **토큰 갱신(refresh)** — 현재 단일 access 토큰(1일). 만료 시 재로그인.
-- **로그아웃 UI 연결** — `features/auth/logout`를 `/me`에 배치.
-- **`/me`에서 프로필 수정** — `PATCH /viewer/profile`은 이미 있으니 화면만 붙이면 된다.
+- **만료된 리프레시 토큰 정리** — 폐기·만료된 행이 계속 쌓인다. 주기적 삭제 배치가 필요.
+- **소켓 토큰 갱신** — 소켓은 연결 시점의 액세스 토큰을 쓴다. 장시간 연결 중 만료되면 재연결이 필요할 수 있다.
+- **`/me` 실내용** — 지금은 로그아웃 버튼만. `PATCH /viewer/profile`은 이미 있으니 프로필 수정 화면을 붙이면 된다.
