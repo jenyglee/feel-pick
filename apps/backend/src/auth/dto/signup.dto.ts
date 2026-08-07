@@ -1,6 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Gender } from '@prisma/client';
 import {
+  Equals,
+  IsBoolean,
   IsDateString,
+  IsEnum,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -29,4 +34,33 @@ export class SignupDto {
   @MinLength(1)
   @MaxLength(50)
   nickname: string;
+
+  @ApiProperty({ enum: Gender, enumName: 'Gender', example: Gender.FEMALE })
+  @IsEnum(Gender)
+  gender: Gender;
+
+  @ApiProperty({
+    description: '이용약관 동의 (필수 — true가 아니면 가입 불가)',
+    example: true,
+  })
+  @IsBoolean()
+  @Equals(true, { message: '이용약관에 동의해야 가입할 수 있습니다.' })
+  agreeTerms: boolean;
+
+  @ApiProperty({
+    description: '개인정보처리방침 동의 (필수 — true가 아니면 가입 불가)',
+    example: true,
+  })
+  @IsBoolean()
+  @Equals(true, { message: '개인정보처리방침에 동의해야 가입할 수 있습니다.' })
+  agreePrivacy: boolean;
+
+  @ApiProperty({
+    description: '마케팅 정보 수신 동의 (선택)',
+    required: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  agreeMarketing?: boolean;
 }

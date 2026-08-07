@@ -25,7 +25,10 @@ export class AuthController {
   // OTP 발급/검증/가입은 무차별 대입 표적이라 전역(100/분)보다 빡빡하게: 분당 5회.
   @Post('request-otp')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: '전화번호로 인증번호(OTP) 발급 — 목 OTP' })
+  @ApiOperation({
+    summary:
+      '전화번호로 인증번호(OTP) 발급 + 문자 발송 (SMS 미설정 시 목 모드 — devCode로 응답)',
+  })
   @ApiResponse({ status: 201, type: RequestOtpResponseDto })
   requestOtp(@Body() dto: RequestOtpDto): Promise<RequestOtpResponseDto> {
     return this.authService.requestOtp(dto);
@@ -43,7 +46,9 @@ export class AuthController {
 
   @Post('signup')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: '인증 완료 후 생일·닉네임으로 회원가입' })
+  @ApiOperation({
+    summary: '인증 완료 후 회원가입 (생일·닉네임·성별·약관 동의)',
+  })
   @ApiResponse({ status: 201, type: TokenResponseDto })
   signup(@Body() dto: SignupDto): Promise<TokenResponseDto> {
     return this.authService.signup(dto);

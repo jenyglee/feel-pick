@@ -28,10 +28,24 @@ describe('인증 (e2e)', () => {
   const verifyOtp = (code: string, phone = PHONE) =>
     request(app.getHttpServer()).post('/auth/verify-otp').send({ phone, code });
 
-  const signup = (phone = PHONE) =>
+  /** 가입 본문 기본값 — 테스트마다 바꿀 필드만 override로 덮어쓴다. */
+  const signupBody = (
+    phone = PHONE,
+    override: Record<string, unknown> = {},
+  ) => ({
+    phone,
+    birthday: '2000-09-20',
+    nickname: '아니근데옥지얌',
+    gender: 'FEMALE',
+    agreeTerms: true,
+    agreePrivacy: true,
+    ...override,
+  });
+
+  const signup = (phone = PHONE, override: Record<string, unknown> = {}) =>
     request(app.getHttpServer())
       .post('/auth/signup')
-      .send({ phone, birthday: '2000-09-20', nickname: '아니근데옥지얌' });
+      .send(signupBody(phone, override));
 
   it('OTP 발급은 테스트 환경에서 devCode를 돌려준다', async () => {
     const res = await requestOtp().expect(201);
@@ -59,8 +73,59 @@ describe('인증 (e2e)', () => {
     expect(me.body).toMatchObject({
       phone: NORMALIZED,
       displayName: '아니근데옥지얌',
+      gender: 'FEMALE',
     });
     expect(me.body.passwordHash).toBeUndefined();
+
+    // 약관 동의는 "언제 했는지"까지 남는다. 마케팅 미동의는 null.
+    const saved = await prisma.user.findUnique({
+      where: { phone: NORMALIZED },
+      select: {
+        termsAgreedAt: true,
+        privacyAgreedAt: true,
+        marketingAgreedAt: true,
+      },
+    });
+    expect(saved?.termsAgreedAt).toBeInstanceOf(Date);
+    expect(saved?.privacyAgreedAt).toBeInstanceOf(Date);
+    expect(saved?.marketingAgreedAt).toBeNull();
+  });
+
+  it('마케팅 동의 시 marketingAgreedAt이 기록된다', async () => {
+    const { body } = await requestOtp().expect(201);
+    await verifyOtp(body.devCode).expect(201);
+    await signup(PHONE, { agreeMarketing: true }).expect(201);
+
+    const saved = await prisma.user.findUnique({
+      where: { phone: NORMALIZED },
+      select: { marketingAgreedAt: true },
+    });
+    expect(saved?.marketingAgreedAt).toBeInstanceOf(Date);
+  });
+
+  it('필수 약관 미동의 가입은 400으로 거부한다', async () => {
+    const { body } = await requestOtp().expect(201);
+    await verifyOtp(body.devCode).expect(201);
+    await signup(PHONE, { agreeTerms: false }).expect(400);
+    await signup(PHONE, { agreePrivacy: false }).expect(400);
+  });
+
+  it('성별 누락/잘못된 값 가입은 400으로 거부한다', async () => {
+    const { body } = await requestOtp().expect(201);
+    await verifyOtp(body.devCode).expect(201);
+
+    await request(app.getHttpServer())
+      .post('/auth/signup')
+      .send({
+        phone: PHONE,
+        birthday: '2000-09-20',
+        nickname: '닉',
+        agreeTerms: true,
+        agreePrivacy: true,
+      })
+      .expect(400);
+
+    await signup(PHONE, { gender: 'UNKNOWN' }).expect(400);
   });
 
   it('기존 유저는 verify-otp에서 바로 토큰을 받는다(isNewUser=false)', async () => {

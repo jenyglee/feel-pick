@@ -8,12 +8,26 @@ datasource db {
   provider = "mysql"
 }
 
+// 성별. 가입 시 필수로 받지만, 기존 행 호환을 위해 컬럼은 nullable.
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
 model User {
   id          String    @id @default(uuid()) @db.VarChar(36)
   phone       String    @unique @db.VarChar(20)
   birthday    DateTime? @db.Date
   displayName String    @db.VarChar(50)
+  gender      Gender?
   createdAt   DateTime  @default(now())
+
+  // 약관 동의 시각(동의 여부 + 언제 동의했는지를 함께 남긴다 — 분쟁 시 증빙).
+  // 이용약관·개인정보처리방침은 가입 필수, 마케팅 수신은 선택.
+  termsAgreedAt     DateTime?
+  privacyAgreedAt   DateTime?
+  marketingAgreedAt DateTime?
 
   // 프로필(초이스 카드 표시용)
   photoUrl   String? @db.VarChar(500)
