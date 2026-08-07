@@ -48,15 +48,23 @@ export function AuthPage() {
   const [gender, setGender] = useState<Gender | null>(null);
 
   // 가입 이후
-  const [token, setToken] = useState<string | null>(null);
+  // 가입으로 받은 토큰 쌍. 아직 쿠키에 심지 않고 들고 있다가 마지막에 심는다.
+  const [tokens, setTokens] = useState<{
+    accessToken: string;
+    refreshToken: string;
+  } | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
 
-  // 토큰을 쿠키에 심고 홈으로. 사진을 안 올렸으면 홈에서 유도 팝업을 띄운다.
-  const goHome = async (accessToken: string, welcome = false) => {
-    await setSession(accessToken);
+  // 토큰 쌍을 쿠키에 심고 홈으로. 사진을 안 올렸으면 홈에서 유도 팝업을 띄운다.
+  const goHome = async (
+    accessToken: string,
+    refreshToken: string,
+    welcome = false,
+  ) => {
+    await setSession(accessToken, refreshToken);
     router.replace(welcome ? '/?welcome=1' : '/');
   };
 
@@ -79,7 +87,7 @@ export function AuthPage() {
       setSignupError(apiErrorMessage(error, '가입에 실패했어요. 다시 시도해주세요.'));
       return;
     }
-    setToken(data.accessToken);
+    setTokens(data);
     setStep('photo');
   };
 
@@ -122,8 +130,8 @@ export function AuthPage() {
               onVerified={async (result) => {
                 if (result.isNewUser) {
                   setStep('terms');
-                } else if (result.accessToken) {
-                  await goHome(result.accessToken);
+                } else if (result.accessToken && result.refreshToken) {
+                  await goHome(result.accessToken, result.refreshToken);
                 }
               }}
             />
@@ -178,12 +186,12 @@ export function AuthPage() {
   }
 
   // 아래는 가입이 끝나 토큰이 있는 상태에서만 도달한다.
-  if (!token) return null;
+  if (!tokens) return null;
 
   if (step === 'photo') {
     return (
       <PhotoUploadForm
-        token={token}
+        token={tokens.accessToken}
         onNext={(url) => {
           setPhotoUrl(url);
           setStep('profile');
@@ -195,9 +203,11 @@ export function AuthPage() {
 
   return (
     <ProfileDetailsForm
-      token={token}
+      token={tokens.accessToken}
       photoUrl={photoUrl}
-      onDone={() => goHome(token, !photoUrl)}
+      onDone={() =>
+        goHome(tokens.accessToken, tokens.refreshToken, !photoUrl)
+      }
     />
   );
 }
