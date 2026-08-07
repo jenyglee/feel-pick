@@ -17,4 +17,20 @@ export default class Viewer {
 
   @ApiProperty({ description: '프리미엄 구독 여부(임시)' })
   isPremium: boolean;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: '조용한 카페 좋아해요',
+    description: '자기소개',
+  })
+  bio: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: [String],
+    example: ['영화', '러닝'],
+    description: '관심사 태그',
+  })
+  interests: string[] | null;
 }

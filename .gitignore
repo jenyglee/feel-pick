@@ -50,6 +50,10 @@ lerna-debug.log*
 .temp
 .tmp
 
+# 업로드된 사용자 파일(프로필 사진). 로컬 디스크 저장 — 커밋 대상 아님.
+# 경로를 고정한다 — `uploads/`로 두면 소스 폴더(src/uploads/)까지 무시된다.
+/apps/backend/uploads/
+
 # Runtime data
 pids
 *.pid

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -8,6 +8,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import User from '../users/entities/user.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import Viewer from './entities/viewer.entity';
 import { ViewerService } from './viewer.service';
 
@@ -23,6 +24,18 @@ export class ViewerController {
   @ApiOkResponse({ type: Viewer })
   getViewer(@CurrentUser() user: User): Promise<Viewer> {
     return this.service.getViewer(user.id);
+  }
+
+  @Patch('profile')
+  @ApiOperation({
+    summary: '프로필 수정 (사진·자기소개·관심사) — 보낸 필드만 반영',
+  })
+  @ApiOkResponse({ type: Viewer })
+  updateProfile(
+    @CurrentUser() user: User,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<Viewer> {
+    return this.service.updateProfile(user.id, dto);
   }
 
   @Post('premium')

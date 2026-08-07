@@ -12,6 +12,7 @@ import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReceivedPicksModule } from './received-picks/received-picks.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { ViewerModule } from './viewer/viewer.module';
 
@@ -49,6 +50,7 @@ const isTest = process.env.NODE_ENV === 'test';
     ViewerModule,
     ReceivedPicksModule,
     ConversationsModule,
+    UploadsModule,
     HealthModule,
   ],
   controllers: [AppController],

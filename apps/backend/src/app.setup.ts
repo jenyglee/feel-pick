@@ -1,6 +1,11 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import express from 'express';
 import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import {
+  UPLOAD_PUBLIC_PREFIX,
+  ensureUploadDir,
+} from './uploads/util/storage.util';
 
 /**
  * API 동작에 영향을 주는 공통 앱 설정(보안 헤더 / 입력 검증 / 에러 표준화).
@@ -19,6 +24,22 @@ export function configureApp(app: INestApplication): void {
         },
       },
     }),
+  );
+
+  // 업로드된 프로필 사진 정적 서빙.
+  // helmet의 기본 Cross-Origin-Resource-Policy는 same-origin이라, 웹(:3001)에서
+  // 백엔드(:3000)의 이미지를 <img>로 못 불러온다 → 이 경로만 cross-origin으로 완화.
+  app.use(
+    UPLOAD_PUBLIC_PREFIX,
+    (
+      _req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      next();
+    },
+    express.static(ensureUploadDir()),
   );
 
   app.useGlobalPipes(
