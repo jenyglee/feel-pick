@@ -25,6 +25,9 @@ const isTest = process.env.NODE_ENV === 'test';
       isGlobal: true,
       cache: true,
       validate: validateEnv,
+      // 환경별 파일을 명시한다. 지정하지 않으면 항상 .env를 읽어서,
+      // 테스트가 개발용 실제 키(SMS 등)를 물고 외부로 나가버린다.
+      envFilePath: isTest ? '.env.test' : '.env',
     }),
     // 구조화 로깅(JSON). 개발에선 pino-pretty로 사람이 읽기 좋게 출력.
     LoggerModule.forRoot({
