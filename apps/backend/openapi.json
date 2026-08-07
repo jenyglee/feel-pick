@@ -41,7 +41,7 @@
             }
           }
         },
-        "summary": "전화번호로 인증번호(OTP) 발급 — 목 OTP",
+        "summary": "전화번호로 인증번호(OTP) 발급 + 문자 발송 (SMS 미설정 시 목 모드 — devCode로 응답)",
         "tags": [
           "auth"
         ]
@@ -105,7 +105,7 @@
             }
           }
         },
-        "summary": "인증 완료 후 생일·닉네임으로 회원가입",
+        "summary": "인증 완료 후 회원가입 (생일·닉네임·성별·약관 동의)",
         "tags": [
           "auth"
         ]
@@ -231,6 +231,43 @@
           }
         ],
         "summary": "현재 유저(\"나\") 조회 (프리미엄 여부 포함)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/profile": {
+      "patch": {
+        "operationId": "ViewerController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "프로필 수정 (사진·자기소개·관심사) — 보낸 필드만 반영",
         "tags": [
           "viewer"
         ]
@@ -436,6 +473,52 @@
         "summary": "메시지 전송 (REST 폴백; 정식 송신은 소켓)",
         "tags": [
           "conversations"
+        ]
+      }
+    },
+    "/uploads/photo": {
+      "post": {
+        "operationId": "UploadsController_uploadPhoto",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "프로필 사진 업로드 (multipart/form-data, 필드명 file)",
+        "tags": [
+          "uploads"
         ]
       }
     },
@@ -690,6 +773,14 @@
           "isNewUser"
         ]
       },
+      "Gender": {
+        "type": "string",
+        "enum": [
+          "MALE",
+          "FEMALE",
+          "OTHER"
+        ]
+      },
       "SignupDto": {
         "type": "object",
         "properties": {
@@ -709,12 +800,38 @@
             "example": "아니근데옥지얌",
             "minLength": 1,
             "maxLength": 50
+          },
+          "gender": {
+            "example": "FEMALE",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Gender"
+              }
+            ]
+          },
+          "agreeTerms": {
+            "type": "boolean",
+            "description": "이용약관 동의 (필수 — true가 아니면 가입 불가)",
+            "example": true
+          },
+          "agreePrivacy": {
+            "type": "boolean",
+            "description": "개인정보처리방침 동의 (필수 — true가 아니면 가입 불가)",
+            "example": true
+          },
+          "agreeMarketing": {
+            "type": "boolean",
+            "description": "마케팅 정보 수신 동의 (선택)",
+            "default": false
           }
         },
         "required": [
           "phone",
           "birthday",
-          "nickname"
+          "nickname",
+          "gender",
+          "agreeTerms",
+          "agreePrivacy"
         ]
       },
       "TokenResponseDto": {
@@ -749,6 +866,15 @@
           "displayName": {
             "type": "string"
           },
+          "gender": {
+            "nullable": true,
+            "description": "성별 (가입 이전 데이터는 null일 수 있음)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Gender"
+              }
+            ]
+          },
           "isPremium": {
             "type": "boolean",
             "description": "프리미엄 구독 여부(임시)"
@@ -763,6 +889,7 @@
           "phone",
           "birthday",
           "displayName",
+          "gender",
           "isPremium",
           "createdAt"
         ]
@@ -889,14 +1016,63 @@
           "isPremium": {
             "type": "boolean",
             "description": "프리미엄 구독 여부(임시)"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "조용한 카페 좋아해요",
+            "description": "자기소개"
+          },
+          "interests": {
+            "nullable": true,
+            "example": [
+              "영화",
+              "러닝"
+            ],
+            "description": "관심사 태그",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
           "id",
           "displayName",
           "photoUrl",
-          "isPremium"
+          "isPremium",
+          "bio",
+          "interests"
         ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "photoUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "/uploads/3f1a....jpg",
+            "description": "업로드 API가 돌려준 사진 경로"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "조용한 카페 좋아해요",
+            "description": "자기소개"
+          },
+          "interests": {
+            "example": [
+              "영화",
+              "러닝",
+              "카페"
+            ],
+            "description": "관심사 태그 (최대 10개)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "Top3Item": {
         "type": "object",
@@ -1089,6 +1265,19 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "UploadResult": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg",
+            "description": "API 서버 기준 상대 경로"
+          }
+        },
+        "required": [
+          "url"
         ]
       }
     }

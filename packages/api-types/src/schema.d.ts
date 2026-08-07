@@ -29,7 +29,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 전화번호로 인증번호(OTP) 발급 — 목 OTP */
+        /** 전화번호로 인증번호(OTP) 발급 + 문자 발송 (SMS 미설정 시 목 모드 — devCode로 응답) */
         post: operations["AuthController_requestOtp"];
         delete?: never;
         options?: never;
@@ -63,7 +63,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 인증 완료 후 생일·닉네임으로 회원가입 */
+        /** 인증 완료 후 회원가입 (생일·닉네임·성별·약관 동의) */
         post: operations["AuthController_signup"];
         delete?: never;
         options?: never;
@@ -145,6 +145,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/viewer/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 프로필 수정 (사진·자기소개·관심사) — 보낸 필드만 반영 */
+        patch: operations["ViewerController_updateProfile"];
+        trace?: never;
+    };
     "/viewer/premium": {
         parameters: {
             query?: never;
@@ -218,6 +235,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/uploads/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 프로필 사진 업로드 (multipart/form-data, 필드명 file) */
+        post: operations["UploadsController_uploadPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -271,6 +305,8 @@ export interface components {
             /** @description 가입 이력이 없는 신규 유저인지 여부. */
             isNewUser: boolean;
         };
+        /** @enum {string} */
+        Gender: "MALE" | "FEMALE" | "OTHER";
         SignupDto: {
             /**
              * @description 전화번호(하이픈 허용)
@@ -285,6 +321,23 @@ export interface components {
             birthday: string;
             /** @example 아니근데옥지얌 */
             nickname: string;
+            /** @example FEMALE */
+            gender: components["schemas"]["Gender"];
+            /**
+             * @description 이용약관 동의 (필수 — true가 아니면 가입 불가)
+             * @example true
+             */
+            agreeTerms: boolean;
+            /**
+             * @description 개인정보처리방침 동의 (필수 — true가 아니면 가입 불가)
+             * @example true
+             */
+            agreePrivacy: boolean;
+            /**
+             * @description 마케팅 정보 수신 동의 (선택)
+             * @default false
+             */
+            agreeMarketing: boolean;
         };
         TokenResponseDto: {
             accessToken: string;
@@ -303,6 +356,8 @@ export interface components {
              */
             birthday: string | null;
             displayName: string;
+            /** @description 성별 (가입 이전 데이터는 null일 수 있음) */
+            gender: components["schemas"]["Gender"] | null;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
             /** Format: date-time */
@@ -363,6 +418,40 @@ export interface components {
             photoUrl: string | null;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
+            /**
+             * @description 자기소개
+             * @example 조용한 카페 좋아해요
+             */
+            bio: string | null;
+            /**
+             * @description 관심사 태그
+             * @example [
+             *       "영화",
+             *       "러닝"
+             *     ]
+             */
+            interests: string[] | null;
+        };
+        UpdateProfileDto: {
+            /**
+             * @description 업로드 API가 돌려준 사진 경로
+             * @example /uploads/3f1a....jpg
+             */
+            photoUrl?: string | null;
+            /**
+             * @description 자기소개
+             * @example 조용한 카페 좋아해요
+             */
+            bio?: string | null;
+            /**
+             * @description 관심사 태그 (최대 10개)
+             * @example [
+             *       "영화",
+             *       "러닝",
+             *       "카페"
+             *     ]
+             */
+            interests?: string[];
         };
         Top3Item: {
             /** @example 술 잘 먹을 것 같은 친구 */
@@ -446,6 +535,13 @@ export interface components {
         SendMessageDto: {
             /** @example 안녕하세요! */
             text: string;
+        };
+        UploadResult: {
+            /**
+             * @description API 서버 기준 상대 경로
+             * @example /uploads/3f1a....jpg
+             */
+            url: string;
         };
     };
     responses: never;
@@ -624,6 +720,29 @@ export interface operations {
             };
         };
     };
+    ViewerController_updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
     ViewerController_subscribePremium: {
         parameters: {
             query?: never;
@@ -746,6 +865,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    UploadsController_uploadPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadResult"];
                 };
             };
         };
