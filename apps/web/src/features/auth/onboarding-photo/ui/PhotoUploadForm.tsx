@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { uploadPhoto } from '../api/uploadPhoto';
+import { uploadPhoto } from '@/entities/viewer';
 
 const MAX_BYTES = 5 * 1024 * 1024; // 백엔드 제한과 동일 — 올리기 전에 걸러 왕복을 아낀다.
 

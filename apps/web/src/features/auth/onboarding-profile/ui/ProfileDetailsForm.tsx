@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateProfile } from '../api/updateProfile';
+import { updateProfile } from '@/entities/viewer';
 
 const MAX_INTERESTS = 10; // 백엔드 ArrayMaxSize와 동일
 const MAX_TAG_LEN = 20;
