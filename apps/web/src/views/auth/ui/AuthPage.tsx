@@ -204,7 +204,6 @@ export function AuthPage() {
   return (
     <ProfileDetailsForm
       token={tokens.accessToken}
-      photoUrl={photoUrl}
       onDone={() =>
         goHome(tokens.accessToken, tokens.refreshToken, !photoUrl)
       }

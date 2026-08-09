@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { uploadPhoto } from '@/entities/viewer';
+import { addAlbumPhoto, uploadPhoto } from '@/entities/viewer';
 
 const MAX_BYTES = 5 * 1024 * 1024; // 백엔드 제한과 동일 — 올리기 전에 걸러 왕복을 아낀다.
 
@@ -54,9 +54,16 @@ export function PhotoUploadForm({
     setUploading(true);
     setError(null);
     const { data, error: err } = await uploadPhoto(file, token);
-    setUploading(false);
     if (err || !data) {
+      setUploading(false);
       setError('업로드에 실패했어요. 다시 시도해주세요.');
+      return;
+    }
+    // 사진 저장소는 사진첩 하나뿐이다. 첫 사진이니 곧 대표 사진이 된다.
+    const saved = await addAlbumPhoto(data.url, { primary: true, token });
+    setUploading(false);
+    if (saved.error) {
+      setError('저장에 실패했어요. 다시 시도해주세요.');
       return;
     }
     onNext(data.url);

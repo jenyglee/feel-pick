@@ -16,11 +16,9 @@ const SUGGESTED = ['카페', '러닝', '영화', '전시', '맛집', '여행', '
  */
 export function ProfileDetailsForm({
   token,
-  photoUrl,
   onDone,
 }: {
   token: string;
-  photoUrl: string | null;
   onDone: () => void;
 }) {
   const [interests, setInterests] = useState<string[]>([]);
@@ -46,7 +44,6 @@ export function ProfileDetailsForm({
     // 빈 값은 아예 보내지 않는다(백엔드가 "보낸 필드만" 반영하므로 덮어쓰기 방지).
     const { error: err } = await updateProfile(
       {
-        ...(photoUrl ? { photoUrl } : {}),
         ...(bio.trim() ? { bio: bio.trim() } : {}),
         ...(interests.length ? { interests } : {}),
       },
