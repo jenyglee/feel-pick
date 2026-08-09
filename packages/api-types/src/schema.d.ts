@@ -213,6 +213,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/viewer/photos/{id}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 그 사진을 대표(사진첩 첫 장)로 지정 */
+        patch: operations["ViewerController_setPrimaryPhoto"];
+        trace?: never;
+    };
     "/viewer/photos/{id}": {
         parameters: {
             query?: never;
@@ -558,11 +575,6 @@ export interface components {
         };
         UpdateProfileDto: {
             /**
-             * @description 업로드 API가 돌려준 사진 경로
-             * @example /uploads/3f1a....jpg
-             */
-            photoUrl?: string | null;
-            /**
              * @description 자기소개
              * @example 조용한 카페 좋아해요
              */
@@ -585,6 +597,8 @@ export interface components {
         AddPhotoDto: {
             /** @example /uploads/3f1a....jpg */
             url: string;
+            /** @description true면 맨 앞에 넣어 대표 사진으로 만든다. 생략하면 맨 뒤. */
+            primary?: boolean;
         };
         Top3Item: {
             /** @example 술 잘 먹을 것 같은 친구 */
@@ -949,6 +963,28 @@ export interface operations {
                 "application/json": components["schemas"]["AddPhotoDto"];
             };
         };
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_setPrimaryPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description 갱신된 "나" */
             200: {
