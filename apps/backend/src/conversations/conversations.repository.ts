@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { primaryPhotoSelect } from '../common/util/photo.util';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 상대 프로필로 노출할 필드 (민감 필드(phone 등) 제외).
 const profileSelect = {
   id: true,
   displayName: true,
-  photoUrl: true,
+  photos: primaryPhotoSelect,
   distanceKm: true,
   bio: true,
   interests: true,

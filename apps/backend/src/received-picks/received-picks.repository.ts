@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { primaryPhotoSelect } from '../common/util/photo.util';
 import { PrismaService } from '../prisma/prisma.service';
 
 // selector 카드에 노출할 프로필 필드 (민감 필드(phone 등) 제외).
+// 사진은 사진첩 첫 장을 대표로 쓴다.
 const profileSelect = {
   id: true,
   displayName: true,
-  photoUrl: true,
   distanceKm: true,
   bio: true,
   interests: true,
+  photos: primaryPhotoSelect,
 } as const;
 
 @Injectable()
@@ -61,7 +63,7 @@ export class ReceivedPicksRepository {
         id: true,
         createdAt: true,
         question: { select: { text: true } },
-        selector: { select: { photoUrl: true } },
+        selector: { select: { photos: primaryPhotoSelect } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,

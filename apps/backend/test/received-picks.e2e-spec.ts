@@ -32,10 +32,18 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
       },
     });
     const a = await prisma.user.create({
-      data: { phone: '01022222222', displayName: 'A', photoUrl: 'photo-a' },
+      data: {
+        phone: '01022222222',
+        displayName: 'A',
+        photos: { create: { url: 'photo-a', sortOrder: 0 } },
+      },
     });
     const b = await prisma.user.create({
-      data: { phone: '01033333333', displayName: 'B', photoUrl: 'photo-b' },
+      data: {
+        phone: '01033333333',
+        displayName: 'B',
+        photos: { create: { url: 'photo-b', sortOrder: 0 } },
+      },
     });
     const q1 = await prisma.question.create({ data: { text: 'Q1' } });
     const q2 = await prisma.question.create({ data: { text: 'Q2' } });

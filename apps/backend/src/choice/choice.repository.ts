@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { primaryPhotoSelect, primaryPhotoUrl } from '../common/util/photo.util';
 import { PrismaService } from '../prisma/prisma.service';
 import Profile from './entities/profile.entity';
 
 // 카드에 노출할 프로필 필드만 선택 (민감 필드(phone 등) 제외).
+// 사진은 사진첩 첫 장을 대표로 쓴다.
 const profileSelect = {
   id: true,
   displayName: true,
-  photoUrl: true,
   distanceKm: true,
   bio: true,
   interests: true,
+  photos: primaryPhotoSelect,
 } as const;
 
 function shuffle<T>(arr: T[]): T[] {
@@ -43,16 +45,17 @@ export class ChoiceRepository {
     return (await this.prisma.user.count({ where: { id } })) > 0;
   }
 
-  // 프로필(photoUrl) 있는 유저만 카드 후보로. 랜덤 count명.
+  // 사진이 한 장이라도 있는 유저만 카드 후보로. 랜덤 count명.
   async findRandomCandidates(count: number): Promise<Profile[]> {
     const users = await this.prisma.user.findMany({
-      where: { photoUrl: { not: null } },
+      where: { photos: { some: {} } },
       select: profileSelect,
     });
     return shuffle(users)
       .slice(0, count)
-      .map((u) => ({
+      .map(({ photos, ...u }) => ({
         ...u,
+        photoUrl: primaryPhotoUrl(photos),
         interests: Array.isArray(u.interests) ? (u.interests as string[]) : [],
       }));
   }

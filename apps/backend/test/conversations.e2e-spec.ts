@@ -27,10 +27,18 @@ describe('소통(대화) REST (e2e)', () => {
       data: { id: ME, phone: '01020000000', displayName: '나' },
     });
     const a = await prisma.user.create({
-      data: { phone: '01020000001', displayName: 'A', photoUrl: 'pa' },
+      data: {
+        phone: '01020000001',
+        displayName: 'A',
+        photos: { create: { url: 'pa', sortOrder: 0 } },
+      },
     });
     const b = await prisma.user.create({
-      data: { phone: '01020000002', displayName: 'B', photoUrl: 'pb' },
+      data: {
+        phone: '01020000002',
+        displayName: 'B',
+        photos: { create: { url: 'pb', sortOrder: 0 } },
+      },
     });
     aId = a.id;
     bId = b.id;

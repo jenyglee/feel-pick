@@ -102,6 +102,17 @@ const USERS: SeedUser[] = [
   { handle: 'yujin', displayName: '유진', img: 36, bio: '베이킹 클래스 운영해요 🧁', distanceKm: 5, interests: ['베이킹', '플라워', '브런치'] },
 ];
 
+/**
+ * 사진첩을 시드한다. 대표 사진은 따로 없고 사진첩 첫 장이 그 역할을 한다.
+ * 재실행해도 중복되지 않도록 기존 사진을 지우고 다시 넣는다.
+ */
+async function seedPhotos(userId: string, img: number): Promise<void> {
+  await prisma.userPhoto.deleteMany({ where: { userId } });
+  await prisma.userPhoto.create({
+    data: { userId, url: `https://i.pravatar.cc/600?img=${img}`, sortOrder: 0 },
+  });
+}
+
 async function main(): Promise<void> {
   // 질문: 비어있을 때만 시드 (재실행 시 중복 방지).
   if ((await prisma.question.count()) === 0) {
@@ -123,7 +134,6 @@ async function main(): Promise<void> {
     where: { id: ME_ID },
     update: {
       displayName: ME.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
       bio: ME.bio,
       distanceKm: ME.distanceKm,
       interests: ME.interests,
@@ -133,12 +143,12 @@ async function main(): Promise<void> {
       id: ME_ID,
       phone: ME_PHONE,
       displayName: ME.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
       bio: ME.bio,
       distanceKm: ME.distanceKm,
       interests: ME.interests,
     },
   });
+  await seedPhotos(ME_ID, ME.img);
 
   // 프로필 유저: phone 기준 upsert (재실행 안전).
   for (let i = 0; i < USERS.length; i++) {
@@ -146,16 +156,17 @@ async function main(): Promise<void> {
     const phone = phoneFor(i);
     const profile = {
       displayName: u.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${u.img}`,
       bio: u.bio,
       distanceKm: u.distanceKm,
       interests: u.interests,
     };
-    await prisma.user.upsert({
+    const saved = await prisma.user.upsert({
       where: { phone },
       update: profile,
       create: { phone, ...profile },
+      select: { id: true },
     });
+    await seedPhotos(saved.id, u.img);
   }
 
   const profileUsers = await prisma.user.findMany({

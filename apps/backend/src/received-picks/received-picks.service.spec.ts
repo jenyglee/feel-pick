@@ -22,7 +22,8 @@ describe('ReceivedPicksService', () => {
       selector: {
         id: selectorUserId,
         displayName: `사용자-${selectorUserId}`,
-        photoUrl,
+        // 대표 사진은 사진첩 첫 장에서 파생된다.
+        photos: photoUrl ? [{ url: photoUrl }] : [],
         distanceKm: 5,
         bio: null,
         interests: ['홍대'],
