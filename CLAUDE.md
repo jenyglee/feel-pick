@@ -10,8 +10,9 @@
 ## 1. 프로젝트 개요
 
 - **feel-pick**: "픽(Pick)을 만들고 투표하는" 앱.
-- **모노레포** (npm workspaces + Turborepo): 백엔드(NestJS) + 프론트(Next.js) + 공유 타입.
+- **모노레포** (npm workspaces + Turborepo): 백엔드(NestJS) + 웹(Next.js) + 모바일(Expo 웹뷰 셸) + 공유 타입.
 - 핵심 가치: **백엔드 OpenAPI → 프론트 타입 자동 생성**. 백엔드 API가 바뀌면 프론트가 컴파일 에러로 즉시 안다.
+- **화면은 웹에만 있다.** 모바일 앱은 그 웹을 웹뷰로 띄우는 껍데기라, 기능 개발은 `apps/web`에서 한다.
 
 ---
 
@@ -41,8 +42,11 @@ feel-pick/
 │  ├─ backend/   (@feel-pick/backend) — NestJS API (:3000)
 │  │  ├─ src/  prisma/  test/  docs/  Dockerfile  prisma.config.ts
 │  │  └─ .env(.example/.test)  tsconfig*.json  nest-cli.json  eslint.config.mjs
-│  └─ web/       (@feel-pick/web)     — Next.js App Router (:3001)
-│     ├─ src/app/  src/lib/  Dockerfile  next.config.ts
+│  ├─ web/       (@feel-pick/web)     — Next.js App Router (:3001)
+│  │  ├─ src/app/  src/lib/  Dockerfile  next.config.ts
+│  └─ mobile/    (@feel-pick/mobile)  — Expo(React Native) 웹뷰 셸
+│     ├─ App.tsx  index.ts  app.json  metro.config.js
+│     └─ src/  (config/ · bridge/ · ui/)
 ├─ packages/
 │  └─ api-types/ (@feel-pick/api-types) — OpenAPI → 생성된 공유 타입
 ├─ docs/                — 모노레포·레포 전체 문서 (commands, monorepo stages)
@@ -163,6 +167,37 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 import는 `@/*` 별칭(`@/* → ./src/*`). 예: `@/shared/api`, `@/entities/profile`, `@/features/profile/profile-select`.
 
 > 현재 전 레이어(`shared`/`entities`/`features`/`widgets`/`views`)가 FSD로 구성됨. 초이스 화면이 레퍼런스: `views/choice` → `widgets/bottom-nav` + `features/profile|question/*` + `entities/profile|choice|question` → `shared/*`.
+
+---
+
+## 5.2 모바일 (Expo 웹뷰 셸) 규칙
+
+> `apps/mobile`에서 작업 시 **`apps/mobile/AGENTS.md`도 반드시 확인** — Expo/RN은 버전마다
+> API가 바뀐다. 코드 쓰기 전 해당 SDK 버전 문서를 볼 것.
+
+**이 앱의 역할은 껍데기다.** 화면·라우팅·상태는 전부 `apps/web`에 있다.
+기능을 추가할 일이 생기면 먼저 "웹에서 못 하나?"를 묻고, 웹이 못 하는 것만 여기 넣는다.
+
+```
+apps/mobile/
+├─ App.tsx              조립만 (SafeAreaProvider + 셸)
+├─ metro.config.js      모노레포 설정 (watchFolders · nodeModulesPaths)
+└─ src/
+   ├─ config/webUrl.ts  웹뷰가 로드할 주소 결정
+   ├─ bridge/           웹 ↔ 네이티브 메시지 계약 · 주입 스크립트
+   └─ ui/               셸 컴포넌트
+```
+
+**웹뷰 주소**: 개발 중엔 `expo-constants`의 `hostUri`에서 개발 머신 IP를 뽑아 쓴다.
+`localhost`로 박으면 실기기에서 폰 자신을 가리켜 실패한다. 배포는 `EXPO_PUBLIC_WEB_URL`로 고정.
+
+**브릿지**: `src/bridge/messages.ts`와 `apps/web/src/shared/lib/native-bridge/messages.ts`는
+**같은 내용을 유지**해야 한다(지금은 수기 동기화, 늘어나면 공유 패키지로 뺀다).
+- 웹에서: `postToNative()` / `onNativeMessage()` — 브라우저에선 자동으로 no-op.
+- 메시지에 버전(`v`)을 실어 보낸다. 앱은 스토어를 거쳐 늦게 갱신되므로 버전이 어긋나는 시기가 반드시 온다. 모르는 `type`은 조용히 무시한다.
+
+**하지 말 것**: 웹뷰에서 될 일을 네이티브 화면으로 만들기(중복 유지보수), 세션을
+네이티브에 따로 저장하기(쿠키는 웹뷰가 관리 — `sharedCookiesEnabled`).
 
 ---
 
