@@ -196,6 +196,40 @@ export interface paths {
         patch: operations["ViewerController_updateProfile"];
         trace?: never;
     };
+    "/viewer/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 사진첩에 사진 추가 (업로드 API가 돌려준 url을 넣는다) */
+        post: operations["ViewerController_addPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/viewer/photos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 사진첩에서 사진 삭제 */
+        delete: operations["ViewerController_removePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/viewer/premium": {
         parameters: {
             query?: never;
@@ -225,6 +259,26 @@ export interface paths {
          * @description 비프리미엄이면 selector 사진은 서버에서 가려진다(photoUrl=null).
          */
         get: operations["ReceivedPicksController_getReceivedPicks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/received-picks/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 마이페이지용 최근 받은 픽 목록 (익명 픽 포함)
+         * @description 비프리미엄이면 썸네일(selectorPhotoUrl)은 서버에서 가려진다.
+         */
+        get: operations["ReceivedPicksController_getRecent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -455,12 +509,24 @@ export interface components {
              */
             selectedUserId: string;
         };
+        UserPhoto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description API 서버 기준 상대 경로
+             * @example /uploads/3f1a....jpg
+             */
+            url: string;
+        };
         Viewer: {
             /** Format: uuid */
             id: string;
             /** @example 나 */
             displayName: string;
-            /** @example https://i.pravatar.cc/600?img=8 */
+            /**
+             * @description 대표 사진
+             * @example https://i.pravatar.cc/600?img=8
+             */
             photoUrl: string | null;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
@@ -477,6 +543,18 @@ export interface components {
              *     ]
              */
             interests: string[] | null;
+            /**
+             * @description 한 줄 상태(지금 기분)
+             * @example 오늘은 러닝 가는 날 🏃
+             */
+            statusMessage: string | null;
+            /**
+             * @description 내가 받은 픽 총 개수
+             * @example 1824
+             */
+            pickCount: number;
+            /** @description 사진첩(노출 순서대로) */
+            photos: components["schemas"]["UserPhoto"][];
         };
         UpdateProfileDto: {
             /**
@@ -490,6 +568,11 @@ export interface components {
              */
             bio?: string | null;
             /**
+             * @description 한 줄 상태(지금 기분). 자기소개(bio)와 별개.
+             * @example 오늘은 러닝 가는 날 🏃
+             */
+            statusMessage?: string | null;
+            /**
              * @description 관심사 태그 (최대 10개)
              * @example [
              *       "영화",
@@ -498,6 +581,10 @@ export interface components {
              *     ]
              */
             interests?: string[];
+        };
+        AddPhotoDto: {
+            /** @example /uploads/3f1a....jpg */
+            url: string;
         };
         Top3Item: {
             /** @example 술 잘 먹을 것 같은 친구 */
@@ -533,6 +620,22 @@ export interface components {
              */
             total: number;
             items: components["schemas"]["ReceivedPick"][];
+        };
+        RecentPick: {
+            /**
+             * Format: uuid
+             * @description 이 픽(Selection)의 ID
+             */
+            id: string;
+            /**
+             * @description 나를 픽한 주제
+             * @example 관심 있는 친구
+             */
+            questionText: string;
+            /** @description 픽한 사람의 썸네일. 비프리미엄이면 서버에서 null로 가린다(우회 방지). */
+            selectorPhotoUrl: string | null;
+            /** Format: date-time */
+            pickedAt: string;
         };
         Message: {
             /** Format: uuid */
@@ -834,6 +937,52 @@ export interface operations {
             };
         };
     };
+    ViewerController_addPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPhotoDto"];
+            };
+        };
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_removePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
     ViewerController_subscribePremium: {
         parameters: {
             query?: never;
@@ -868,6 +1017,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceivedPicks"];
+                };
+            };
+        };
+    };
+    ReceivedPicksController_getRecent: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentPick"][];
                 };
             };
         };

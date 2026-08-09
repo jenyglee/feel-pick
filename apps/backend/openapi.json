@@ -330,6 +330,79 @@
         ]
       }
     },
+    "/viewer/photos": {
+      "post": {
+        "operationId": "ViewerController_addPhoto",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "갱신된 \"나\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "사진첩에 사진 추가 (업로드 API가 돌려준 url을 넣는다)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/photos/{id}": {
+      "delete": {
+        "operationId": "ViewerController_removePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "갱신된 \"나\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "사진첩에서 사진 삭제",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
     "/viewer/premium": {
       "post": {
         "operationId": "ViewerController_subscribePremium",
@@ -380,6 +453,47 @@
           }
         ],
         "summary": "나를 픽한 사람 목록 + 각자의 받은픽 Top3",
+        "tags": [
+          "received-picks"
+        ]
+      }
+    },
+    "/received-picks/recent": {
+      "get": {
+        "description": "비프리미엄이면 썸네일(selectorPhotoUrl)은 서버에서 가려진다.",
+        "operationId": "ReceivedPicksController_getRecent",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecentPick"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "마이페이지용 최근 받은 픽 목록 (익명 픽 포함)",
         "tags": [
           "received-picks"
         ]
@@ -1079,6 +1193,24 @@
           "selectedUserId"
         ]
       },
+      "UserPhoto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg",
+            "description": "API 서버 기준 상대 경로"
+          }
+        },
+        "required": [
+          "id",
+          "url"
+        ]
+      },
       "Viewer": {
         "type": "object",
         "properties": {
@@ -1093,7 +1225,8 @@
           "photoUrl": {
             "type": "string",
             "nullable": true,
-            "example": "https://i.pravatar.cc/600?img=8"
+            "example": "https://i.pravatar.cc/600?img=8",
+            "description": "대표 사진"
           },
           "isPremium": {
             "type": "boolean",
@@ -1116,6 +1249,24 @@
             "items": {
               "type": "string"
             }
+          },
+          "statusMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": "오늘은 러닝 가는 날 🏃",
+            "description": "한 줄 상태(지금 기분)"
+          },
+          "pickCount": {
+            "type": "number",
+            "example": 1824,
+            "description": "내가 받은 픽 총 개수"
+          },
+          "photos": {
+            "description": "사진첩(노출 순서대로)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserPhoto"
+            }
           }
         },
         "required": [
@@ -1124,7 +1275,10 @@
           "photoUrl",
           "isPremium",
           "bio",
-          "interests"
+          "interests",
+          "statusMessage",
+          "pickCount",
+          "photos"
         ]
       },
       "UpdateProfileDto": {
@@ -1142,6 +1296,12 @@
             "example": "조용한 카페 좋아해요",
             "description": "자기소개"
           },
+          "statusMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": "오늘은 러닝 가는 날 🏃",
+            "description": "한 줄 상태(지금 기분). 자기소개(bio)와 별개."
+          },
           "interests": {
             "example": [
               "영화",
@@ -1155,6 +1315,18 @@
             }
           }
         }
+      },
+      "AddPhotoDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg"
+          }
+        },
+        "required": [
+          "url"
+        ]
       },
       "Top3Item": {
         "type": "object",
@@ -1233,6 +1405,36 @@
         "required": [
           "total",
           "items"
+        ]
+      },
+      "RecentPick": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "이 픽(Selection)의 ID"
+          },
+          "questionText": {
+            "type": "string",
+            "example": "관심 있는 친구",
+            "description": "나를 픽한 주제"
+          },
+          "selectorPhotoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "픽한 사람의 썸네일. 비프리미엄이면 서버에서 null로 가린다(우회 방지)."
+          },
+          "pickedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "questionText",
+          "selectorPhotoUrl",
+          "pickedAt"
         ]
       },
       "Message": {
