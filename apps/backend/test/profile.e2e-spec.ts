@@ -79,13 +79,13 @@ describe('프로필 수정 / 사진 업로드 (e2e)', () => {
       const res = await request(app.getHttpServer())
         .patch('/viewer/profile')
         .set('Authorization', auth)
-        .send({ photoUrl: '/uploads/x.png' })
+        .send({ statusMessage: '나중에 추가한 상태' })
         .expect(200);
 
       expect(res.body).toMatchObject({
         bio: '처음 소개',
         interests: ['영화'],
-        photoUrl: '/uploads/x.png',
+        statusMessage: '나중에 추가한 상태',
       });
     });
 

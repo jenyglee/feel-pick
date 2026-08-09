@@ -12,17 +12,6 @@ export class UpdateProfileDto {
   @ApiProperty({
     required: false,
     nullable: true,
-    example: '/uploads/3f1a....jpg',
-    description: '업로드 API가 돌려준 사진 경로',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  photoUrl?: string;
-
-  @ApiProperty({
-    required: false,
-    nullable: true,
     example: '조용한 카페 좋아해요',
     description: '자기소개',
   })

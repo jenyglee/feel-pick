@@ -4,10 +4,10 @@ import UserPhoto from './entities/user-photo.entity';
 import Viewer from './entities/viewer.entity';
 
 // Viewer 응답에 필요한 필드만 선택 (민감 필드(phone 등) 제외).
+// 사진첩은 전부 내려주고, 대표 사진(photoUrl)은 그 첫 장에서 파생한다.
 const viewerSelect = {
   id: true,
   displayName: true,
-  photoUrl: true,
   isPremium: true,
   bio: true,
   interests: true,
@@ -18,14 +18,15 @@ const viewerSelect = {
   },
 } as const;
 
-/** DB 행(interests는 Json)을 응답 모양(string[])으로 맞춘다. */
-type ViewerRow = Omit<Viewer, 'interests' | 'pickCount'> & {
+/** DB 행(interests는 Json)을 응답 모양으로 맞춘다. */
+type ViewerRow = Omit<Viewer, 'interests' | 'pickCount' | 'photoUrl'> & {
   interests: unknown;
 };
 
 function toViewer(row: ViewerRow, pickCount: number): Viewer {
   return {
     ...row,
+    photoUrl: row.photos[0]?.url ?? null,
     interests: Array.isArray(row.interests)
       ? (row.interests as string[])
       : null,
@@ -65,18 +66,12 @@ export class ViewerRepository {
   /** 프로필 부분 수정. undefined인 필드는 Prisma가 알아서 건드리지 않는다. */
   async updateProfile(
     id: string,
-    data: {
-      photoUrl?: string;
-      bio?: string;
-      interests?: string[];
-      statusMessage?: string;
-    },
+    data: { bio?: string; interests?: string[]; statusMessage?: string },
   ): Promise<Viewer> {
     const [row, pickCount] = await Promise.all([
       this.prisma.user.update({
         where: { id },
         data: {
-          photoUrl: data.photoUrl,
           bio: data.bio,
           interests: data.interests,
           statusMessage: data.statusMessage,
@@ -92,17 +87,42 @@ export class ViewerRepository {
     return this.prisma.userPhoto.count({ where: { userId } });
   }
 
-  /** 사진첩에 한 장 추가. 새 사진은 맨 뒤로 붙인다. */
-  async addPhoto(userId: string, url: string): Promise<UserPhoto> {
-    const last = await this.prisma.userPhoto.findFirst({
+  /**
+   * 사진첩에 한 장 추가.
+   * primary면 맨 앞(=대표 사진 자리), 아니면 맨 뒤에 붙인다.
+   */
+  async addPhoto(
+    userId: string,
+    url: string,
+    primary = false,
+  ): Promise<UserPhoto> {
+    const edge = await this.prisma.userPhoto.findFirst({
       where: { userId },
-      orderBy: { sortOrder: 'desc' },
+      orderBy: { sortOrder: primary ? 'asc' : 'desc' },
       select: { sortOrder: true },
     });
+    const sortOrder = primary
+      ? (edge?.sortOrder ?? 0) - 1
+      : (edge?.sortOrder ?? -1) + 1;
+
     return this.prisma.userPhoto.create({
-      data: { userId, url, sortOrder: (last?.sortOrder ?? -1) + 1 },
+      data: { userId, url, sortOrder },
       select: { id: true, url: true },
     });
+  }
+
+  /** 그 사진을 사진첩 맨 앞으로 — 대표 사진이 된다. 내 사진이 아니면 0건. */
+  async setPrimaryPhoto(userId: string, photoId: string): Promise<number> {
+    const first = await this.prisma.userPhoto.findFirst({
+      where: { userId },
+      orderBy: { sortOrder: 'asc' },
+      select: { sortOrder: true },
+    });
+    const { count } = await this.prisma.userPhoto.updateMany({
+      where: { id: photoId, userId },
+      data: { sortOrder: (first?.sortOrder ?? 0) - 1 },
+    });
+    return count;
   }
 
   /** 내 사진만 지운다(남의 사진 id를 넣어도 0건 삭제). */

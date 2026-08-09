@@ -58,7 +58,17 @@ export class ViewerController {
     @CurrentUser() user: User,
     @Body() dto: AddPhotoDto,
   ): Promise<Viewer> {
-    return this.service.addPhoto(user.id, dto.url);
+    return this.service.addPhoto(user.id, dto.url, dto.primary);
+  }
+
+  @Patch('photos/:id/primary')
+  @ApiOperation({ summary: '그 사진을 대표(사진첩 첫 장)로 지정' })
+  @ApiOkResponse({ type: Viewer, description: '갱신된 "나"' })
+  setPrimaryPhoto(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<Viewer> {
+    return this.service.setPrimaryPhoto(user.id, id);
   }
 
   @Delete('photos/:id')

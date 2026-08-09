@@ -29,21 +29,30 @@ export class ViewerService {
   /** 프로필(사진·자기소개·관심사·상태) 부분 수정. 보낸 필드만 반영된다. */
   updateProfile(id: string, dto: UpdateProfileDto): Promise<Viewer> {
     return this.repo.updateProfile(id, {
-      photoUrl: dto.photoUrl,
       bio: dto.bio,
       interests: dto.interests,
       statusMessage: dto.statusMessage,
     });
   }
 
-  /** 사진첩에 사진 추가. 갱신된 "나"를 반환해 화면이 한 번에 다시 그려지게 한다. */
-  async addPhoto(id: string, url: string): Promise<Viewer> {
+  /**
+   * 사진첩에 사진 추가. 갱신된 "나"를 반환해 화면이 한 번에 다시 그려지게 한다.
+   * primary면 맨 앞에 넣어 곧바로 대표 사진이 된다.
+   */
+  async addPhoto(id: string, url: string, primary = false): Promise<Viewer> {
     if ((await this.repo.countPhotos(id)) >= MAX_PHOTOS) {
       throw new BadRequestException(
         `사진은 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`,
       );
     }
-    await this.repo.addPhoto(id, url);
+    await this.repo.addPhoto(id, url, primary);
+    return this.getViewer(id);
+  }
+
+  /** 그 사진을 대표(첫 장)로 올린다. 내 사진이 아니면 404. */
+  async setPrimaryPhoto(id: string, photoId: string): Promise<Viewer> {
+    const updated = await this.repo.setPrimaryPhoto(id, photoId);
+    if (updated === 0) throw new NotFoundException('사진을 찾을 수 없습니다.');
     return this.getViewer(id);
   }
 
