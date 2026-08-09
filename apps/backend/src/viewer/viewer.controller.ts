@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -8,6 +18,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import User from '../users/entities/user.entity';
+import { AddPhotoDto } from './dto/add-photo.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import Viewer from './entities/viewer.entity';
 import { ViewerService } from './viewer.service';
@@ -36,6 +47,28 @@ export class ViewerController {
     @Body() dto: UpdateProfileDto,
   ): Promise<Viewer> {
     return this.service.updateProfile(user.id, dto);
+  }
+
+  @Post('photos')
+  @ApiOperation({
+    summary: '사진첩에 사진 추가 (업로드 API가 돌려준 url을 넣는다)',
+  })
+  @ApiOkResponse({ type: Viewer, description: '갱신된 "나"' })
+  addPhoto(
+    @CurrentUser() user: User,
+    @Body() dto: AddPhotoDto,
+  ): Promise<Viewer> {
+    return this.service.addPhoto(user.id, dto.url);
+  }
+
+  @Delete('photos/:id')
+  @ApiOperation({ summary: '사진첩에서 사진 삭제' })
+  @ApiOkResponse({ type: Viewer, description: '갱신된 "나"' })
+  removePhoto(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<Viewer> {
+    return this.service.removePhoto(user.id, id);
   }
 
   @Post('premium')

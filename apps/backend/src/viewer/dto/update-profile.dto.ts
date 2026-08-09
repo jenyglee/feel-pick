@@ -33,6 +33,17 @@ export class UpdateProfileDto {
 
   @ApiProperty({
     required: false,
+    nullable: true,
+    example: '오늘은 러닝 가는 날 🏃',
+    description: '한 줄 상태(지금 기분). 자기소개(bio)와 별개.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  statusMessage?: string;
+
+  @ApiProperty({
+    required: false,
     type: [String],
     example: ['영화', '러닝', '카페'],
     description: '관심사 태그 (최대 10개)',

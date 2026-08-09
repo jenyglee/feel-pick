@@ -147,4 +147,85 @@ describe('프로필 수정 / 사진 업로드 (e2e)', () => {
         .expect(400);
     });
   });
+
+  describe('사진첩 (POST/DELETE /viewer/photos)', () => {
+    const addPhoto = (url: string) =>
+      request(app.getHttpServer())
+        .post('/viewer/photos')
+        .set('Authorization', auth)
+        .send({ url });
+
+    it('추가하면 순서대로 쌓이고 GET /viewer에 반영된다', async () => {
+      await addPhoto('/uploads/1.png').expect(201);
+      const res = await addPhoto('/uploads/2.png').expect(201);
+
+      expect(res.body.photos.map((p: { url: string }) => p.url)).toEqual([
+        '/uploads/1.png',
+        '/uploads/2.png',
+      ]);
+
+      const viewer = await request(app.getHttpServer())
+        .get('/viewer')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(viewer.body.photos).toHaveLength(2);
+    });
+
+    it('9장을 넘기면 400', async () => {
+      for (let i = 0; i < 9; i++) {
+        await addPhoto(`/uploads/${i}.png`).expect(201);
+      }
+      await addPhoto('/uploads/over.png').expect(400);
+    });
+
+    it('삭제하면 목록에서 빠진다', async () => {
+      const added = await addPhoto('/uploads/1.png').expect(201);
+      const photoId = added.body.photos[0].id;
+
+      const res = await request(app.getHttpServer())
+        .delete(`/viewer/photos/${photoId}`)
+        .set('Authorization', auth)
+        .expect(200);
+
+      expect(res.body.photos).toHaveLength(0);
+    });
+
+    it('남의 사진 id로 삭제하면 404', async () => {
+      await request(app.getHttpServer())
+        .delete('/viewer/photos/33333333-3333-4333-8333-333333333333')
+        .set('Authorization', auth)
+        .expect(404);
+    });
+
+    it('토큰이 없으면 401', async () => {
+      await request(app.getHttpServer())
+        .post('/viewer/photos')
+        .send({ url: '/uploads/1.png' })
+        .expect(401);
+    });
+  });
+
+  describe('상태 메시지 · 픽 수', () => {
+    it('statusMessage를 저장하고 GET /viewer에 반영된다', async () => {
+      await request(app.getHttpServer())
+        .patch('/viewer/profile')
+        .set('Authorization', auth)
+        .send({ statusMessage: '오늘은 러닝 가는 날 🏃' })
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get('/viewer')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(res.body.statusMessage).toBe('오늘은 러닝 가는 날 🏃');
+    });
+
+    it('받은 픽이 없으면 pickCount는 0', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/viewer')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(res.body.pickCount).toBe(0);
+    });
+  });
 });

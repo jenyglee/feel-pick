@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import Viewer from './entities/viewer.entity';
 import { ViewerRepository } from './viewer.repository';
 import { ViewerService } from './viewer.service';
@@ -12,12 +12,21 @@ describe('ViewerService', () => {
     displayName: '나',
     photoUrl: 'p',
     isPremium: false,
+    bio: null,
+    interests: null,
+    statusMessage: null,
+    pickCount: 0,
+    photos: [],
   };
 
   beforeEach(() => {
     repo = {
       findById: jest.fn(),
       setPremium: jest.fn(),
+      updateProfile: jest.fn(),
+      countPhotos: jest.fn(),
+      addPhoto: jest.fn(),
+      deletePhoto: jest.fn(),
     } as unknown as jest.Mocked<ViewerRepository>;
     service = new ViewerService(repo);
   });
@@ -41,5 +50,40 @@ describe('ViewerService', () => {
 
     expect(repo.setPremium).toHaveBeenCalledWith('me', true);
     expect(result.isPremium).toBe(true);
+  });
+
+  describe('사진첩', () => {
+    it('사진을 추가하고 갱신된 "나"를 돌려준다', async () => {
+      repo.countPhotos.mockResolvedValue(2);
+      repo.findById.mockResolvedValue(viewer);
+
+      await service.addPhoto('me', '/uploads/a.png');
+
+      expect(repo.addPhoto).toHaveBeenCalledWith('me', '/uploads/a.png');
+    });
+
+    it('상한(9장)을 넘으면 400이고 저장하지 않는다', async () => {
+      repo.countPhotos.mockResolvedValue(9);
+
+      await expect(
+        service.addPhoto('me', '/uploads/a.png'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.addPhoto).not.toHaveBeenCalled();
+    });
+
+    it('내 사진이 아니면(삭제 0건) NotFoundException', async () => {
+      repo.deletePhoto.mockResolvedValue(0);
+
+      await expect(service.removePhoto('me', 'other')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('삭제되면 갱신된 "나"를 돌려준다', async () => {
+      repo.deletePhoto.mockResolvedValue(1);
+      repo.findById.mockResolvedValue(viewer);
+
+      await expect(service.removePhoto('me', 'p1')).resolves.toEqual(viewer);
+    });
   });
 });
