@@ -35,17 +35,14 @@ export class ViewerService {
     });
   }
 
-  /**
-   * 사진첩에 사진 추가. 갱신된 "나"를 반환해 화면이 한 번에 다시 그려지게 한다.
-   * primary면 맨 앞에 넣어 곧바로 대표 사진이 된다.
-   */
-  async addPhoto(id: string, url: string, primary = false): Promise<Viewer> {
+  /** 사진첩 맨 뒤에 사진 추가. 갱신된 "나"를 반환해 화면이 한 번에 다시 그려진다. */
+  async addPhoto(id: string, url: string): Promise<Viewer> {
     if ((await this.repo.countPhotos(id)) >= MAX_PHOTOS) {
       throw new BadRequestException(
         `사진은 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`,
       );
     }
-    await this.repo.addPhoto(id, url, primary);
+    await this.repo.addPhoto(id, url);
     return this.getViewer(id);
   }
 

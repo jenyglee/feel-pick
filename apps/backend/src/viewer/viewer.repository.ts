@@ -87,26 +87,15 @@ export class ViewerRepository {
     return this.prisma.userPhoto.count({ where: { userId } });
   }
 
-  /**
-   * 사진첩에 한 장 추가.
-   * primary면 맨 앞(=대표 사진 자리), 아니면 맨 뒤에 붙인다.
-   */
-  async addPhoto(
-    userId: string,
-    url: string,
-    primary = false,
-  ): Promise<UserPhoto> {
-    const edge = await this.prisma.userPhoto.findFirst({
+  /** 사진첩 맨 뒤에 한 장 추가. */
+  async addPhoto(userId: string, url: string): Promise<UserPhoto> {
+    const last = await this.prisma.userPhoto.findFirst({
       where: { userId },
-      orderBy: { sortOrder: primary ? 'asc' : 'desc' },
+      orderBy: { sortOrder: 'desc' },
       select: { sortOrder: true },
     });
-    const sortOrder = primary
-      ? (edge?.sortOrder ?? 0) - 1
-      : (edge?.sortOrder ?? -1) + 1;
-
     return this.prisma.userPhoto.create({
-      data: { userId, url, sortOrder },
+      data: { userId, url, sortOrder: (last?.sortOrder ?? -1) + 1 },
       select: { id: true, url: true },
     });
   }

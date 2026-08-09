@@ -6,8 +6,8 @@ import { getRecentPicks, type RecentPick } from '@/entities/received-pick';
 import { getViewer, type Viewer } from '@/entities/viewer';
 import { PhotoAlbumEditor } from '@/features/profile/profile-album-edit';
 import { InterestsEditor } from '@/features/profile/profile-interests-edit';
-import { ProfilePhotoEditor } from '@/features/profile/profile-photo-edit';
 import { StatusMessageEditor } from '@/features/profile/profile-status-edit';
+import { assetUrl } from '@/shared/lib/asset';
 import { IcGear24 } from '@/shared/ui/icons';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { RecentPicksSection } from './RecentPicksSection';
@@ -58,11 +58,18 @@ export function MePage() {
         {!loading && viewer && (
           <>
             <section className="flex flex-col items-center pt-2">
-              <ProfilePhotoEditor
-                photoUrl={viewer.photoUrl}
-                displayName={viewer.displayName}
-                onUpdated={setViewer}
-              />
+              {/* 사진 관리는 아래 사진첩에서만 한다. 여기는 대표 사진(=첫 장) 표시 전용. */}
+              <div className="size-44 overflow-hidden rounded-full bg-gray-100">
+                {viewer.photoUrl && (
+                  // 업로드 경로는 런타임 값이라 next/image 최적화 대상이 아니다.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={assetUrl(viewer.photoUrl) ?? ''}
+                    alt={viewer.displayName}
+                    className="h-full w-full object-cover"
+                  />
+                )}
+              </div>
               <h1 className="mt-4 text-2xl font-bold">{viewer.displayName}</h1>
               <StatusMessageEditor
                 statusMessage={viewer.statusMessage}

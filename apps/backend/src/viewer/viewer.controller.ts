@@ -58,7 +58,7 @@ export class ViewerController {
     @CurrentUser() user: User,
     @Body() dto: AddPhotoDto,
   ): Promise<Viewer> {
-    return this.service.addPhoto(user.id, dto.url, dto.primary);
+    return this.service.addPhoto(user.id, dto.url);
   }
 
   @Patch('photos/:id/primary')

@@ -60,7 +60,7 @@ export function PhotoUploadForm({
       return;
     }
     // 사진 저장소는 사진첩 하나뿐이다. 첫 사진이니 곧 대표 사진이 된다.
-    const saved = await addAlbumPhoto(data.url, { primary: true, token });
+    const saved = await addAlbumPhoto(data.url, token);
     setUploading(false);
     if (saved.error) {
       setError('저장에 실패했어요. 다시 시도해주세요.');

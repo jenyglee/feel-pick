@@ -60,7 +60,7 @@ describe('ViewerService', () => {
 
       await service.addPhoto('me', '/uploads/a.png');
 
-      expect(repo.addPhoto).toHaveBeenCalledWith('me', '/uploads/a.png', false);
+      expect(repo.addPhoto).toHaveBeenCalledWith('me', '/uploads/a.png');
     });
 
     it('상한(9장)을 넘으면 400이고 저장하지 않는다', async () => {

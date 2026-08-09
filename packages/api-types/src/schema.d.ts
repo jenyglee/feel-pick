@@ -597,8 +597,6 @@ export interface components {
         AddPhotoDto: {
             /** @example /uploads/3f1a....jpg */
             url: string;
-            /** @description true면 맨 앞에 넣어 대표 사진으로 만든다. 생략하면 맨 뒤. */
-            primary?: boolean;
         };
         Top3Item: {
             /** @example 술 잘 먹을 것 같은 친구 */

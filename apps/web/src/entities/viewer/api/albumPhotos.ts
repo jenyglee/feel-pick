@@ -1,18 +1,14 @@
 import { api } from '@/shared/api';
 
 /**
- * 사진첩에 추가. 업로드가 돌려준 url을 넣는다. 응답은 갱신된 "나".
- * primary면 맨 앞에 들어가 곧바로 대표 사진(카드에 노출되는 얼굴)이 된다.
+ * 사진첩 맨 뒤에 추가. 업로드가 돌려준 url을 넣는다. 응답은 갱신된 "나".
+ * 대표(첫 장)로 올리려면 setPrimaryPhoto를 따로 부른다.
  * token은 온보딩 전용 — 가입 직후엔 아직 세션 쿠키가 없다.
  */
-export function addAlbumPhoto(
-  url: string,
-  options: { primary?: boolean; token?: string } = {},
-) {
-  const { primary, token } = options;
+export function addAlbumPhoto(url: string, token?: string) {
   return api.POST('/viewer/photos', {
     ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-    body: { url, ...(primary ? { primary: true } : {}) },
+    body: { url },
   });
 }
 
