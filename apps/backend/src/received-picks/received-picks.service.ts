@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import Profile from '../choice/entities/profile.entity';
 import User from '../users/entities/user.entity';
+import RecentPick from './entities/recent-pick.entity';
 import ReceivedPick from './entities/received-pick.entity';
 import ReceivedPicks from './entities/received-picks.entity';
 import Top3Item from './entities/top3-item.entity';
 import { ReceivedPicksRepository } from './received-picks.repository';
 
 const TOP_N = 3;
+
+/** 마이페이지 "최근 받은 픽" 기본 노출 개수. */
+export const RECENT_LIMIT = 10;
 
 type SelectorProfile = {
   id: string;
@@ -31,6 +35,22 @@ function toProfile(raw: SelectorProfile): Profile {
 @Injectable()
 export class ReceivedPicksService {
   constructor(private readonly repo: ReceivedPicksRepository) {}
+
+  /**
+   * 마이페이지 "최근 받은 픽" 목록.
+   * 받은픽 탭과 동일하게 비프리미엄에게는 썸네일을 서버에서 가린다.
+   */
+  async getRecent(viewer: User, limit: number): Promise<RecentPick[]> {
+    const rows = await this.repo.findRecentReceived(viewer.id, limit);
+    return rows.map((r) => ({
+      id: r.id,
+      questionText: r.question.text,
+      selectorPhotoUrl: viewer.isPremium
+        ? (r.selector?.photoUrl ?? null)
+        : null,
+      pickedAt: r.createdAt,
+    }));
+  }
 
   /**
    * 받은픽 탭 데이터.

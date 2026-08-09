@@ -102,4 +102,71 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
     expect(res.body).toMatchObject({ displayName: '나', isPremium: false });
     expect(res.body.passwordHash).toBeUndefined();
   });
+
+  it('GET /viewer 의 pickCount는 내가 받은 총 픽 수와 같다', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/viewer')
+      .set('Authorization', auth)
+      .expect(200);
+
+    // 시드: A가 q1·q2, B가 q1 → 나를 픽한 건 총 3건
+    expect(res.body.pickCount).toBe(3);
+  });
+
+  describe('GET /received-picks/recent (마이페이지)', () => {
+    it('최신순으로 질문 텍스트와 함께 내려준다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+
+      expect(res.body).toHaveLength(3);
+      expect(res.body[0]).toMatchObject({ questionText: expect.any(String) });
+      const times = res.body.map((r: { pickedAt: string }) =>
+        new Date(r.pickedAt).getTime(),
+      );
+      expect([...times].sort((a: number, b: number) => b - a)).toEqual(times);
+    });
+
+    it('limit으로 개수를 줄일 수 있다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent?limit=2')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(res.body).toHaveLength(2);
+    });
+
+    it('비프리미엄에게는 썸네일이 가려진다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+      for (const item of res.body) {
+        expect(item.selectorPhotoUrl).toBeNull();
+      }
+    });
+
+    it('프리미엄이면 썸네일이 공개된다', async () => {
+      await request(app.getHttpServer())
+        .post('/viewer/premium')
+        .set('Authorization', auth)
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(
+        res.body.some(
+          (i: { selectorPhotoUrl: string | null }) => i.selectorPhotoUrl,
+        ),
+      ).toBe(true);
+    });
+
+    it('토큰이 없으면 401', async () => {
+      await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .expect(401);
+    });
+  });
 });

@@ -50,6 +50,24 @@ export class ReceivedPicksRepository {
     });
   }
 
+  /**
+   * 마이페이지용 최근 받은 픽 N건. 익명(selector 없음) 픽도 포함한다 —
+   * "몇 개 받았는지"를 보여주는 목록이라 사람이 식별되지 않아도 의미가 있다.
+   */
+  findRecentReceived(meId: string, limit: number) {
+    return this.prisma.selection.findMany({
+      where: { selectedUserId: meId },
+      select: {
+        id: true,
+        createdAt: true,
+        question: { select: { text: true } },
+        selector: { select: { photoUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
   /** questionId → text 매핑용. */
   findAllQuestions() {
     return this.prisma.question.findMany({ select: { id: true, text: true } });
