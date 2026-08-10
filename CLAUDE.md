@@ -196,6 +196,23 @@ apps/mobile/
 - 웹에서: `postToNative()` / `onNativeMessage()` — 브라우저에선 자동으로 no-op.
 - 메시지에 버전(`v`)을 실어 보낸다. 앱은 스토어를 거쳐 늦게 갱신되므로 버전이 어긋나는 시기가 반드시 온다. 모르는 `type`은 조용히 무시한다.
 
+**실기기에서 확인할 때 (중요)**: Next 개발 서버는 **`Host`가 localhost가 아니면
+HMR 웹소켓을 거부**한다. 그러면 앱 라우터 dev 번들이 하이드레이션을 못 해
+**화면은 그려지는데 버튼이 안 눌린다.** (`next dev -H 0.0.0.0`으로도 안 풀린다.)
+
+둘 중 하나로 우회한다.
+
+| 방법 | 명령 | 핫리로드 |
+|---|---|---|
+| USB 연결 (권장) | `adb reverse tcp:3001 tcp:3001` + `adb reverse tcp:3000 tcp:3000` 후 `EXPO_PUBLIC_WEB_URL=http://localhost:3001`로 실행 | ✅ |
+| 와이파이 | 웹을 프로덕션으로: `npm run build -w @feel-pick/web && npm run start -w @feel-pick/web` | ✕ |
+
+`adb reverse`는 폰의 localhost를 맥으로 연결해 Host가 localhost가 되게 만든다.
+
+**API 주소**: 브라우저 쪽 베이스 URL은 `shared/api/baseUrl`이 **페이지를 내려준
+호스트**에서 유도한다. localhost로 고정하면 폰에서 그 localhost가 폰 자신을
+가리켜 API가 전부 실패한다.
+
 **하지 말 것**: 웹뷰에서 될 일을 네이티브 화면으로 만들기(중복 유지보수), 세션을
 네이티브에 따로 저장하기(쿠키는 웹뷰가 관리 — `sharedCookiesEnabled`).
 
