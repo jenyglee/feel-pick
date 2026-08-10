@@ -65,9 +65,18 @@ export function WebViewShell() {
     setCanGoBack(nav.canGoBack);
   }, []);
 
+  // 안드로이드는 edge-to-edge라 시스템 바 뒤까지 그려진다.
+  // 네 방향 인셋을 모두 비워야 상단 상태바·하단 네비게이션 바에 콘텐츠가 가리지 않는다.
+  const safeArea = {
+    paddingTop: insets.top,
+    paddingBottom: insets.bottom,
+    paddingLeft: insets.left,
+    paddingRight: insets.right,
+  };
+
   if (failed) {
     return (
-      <View style={[styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.center, safeArea]}>
         <Text style={styles.errorTitle}>연결할 수 없어요</Text>
         <Text style={styles.errorBody}>
           네트워크 상태를 확인한 뒤 다시 시도해주세요.
@@ -81,7 +90,7 @@ export function WebViewShell() {
   }
 
   return (
-    <View style={[styles.fill, { paddingTop: insets.top }]}>
+    <View style={[styles.fill, safeArea]}>
       <WebView
         key={attempt}
         ref={webRef}
