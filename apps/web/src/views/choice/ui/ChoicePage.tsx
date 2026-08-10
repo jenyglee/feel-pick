@@ -120,7 +120,7 @@ export function ChoicePage() {
 
   return (
     <div
-      className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col text-white"
+      className="relative mx-auto flex min-h-dvh w-full max-w-[440px] flex-col text-white"
       style={{
         backgroundImage:
           'linear-gradient(160deg, var(--color-primary), var(--color-primary-strong))',

@@ -15,7 +15,7 @@ export function GenderSelect({ onNext }: { onNext: (gender: Gender) => void }) {
   const [selected, setSelected] = useState<Gender | null>(null);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       <div className="px-6 pt-16">
         <h1 className="text-xl font-bold">성별이 어떻게 되세요?</h1>
 

@@ -214,7 +214,7 @@ export function AuthPage() {
 // 화면 공통 프레임(모바일 폭 고정).
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       {children}
     </div>
   );

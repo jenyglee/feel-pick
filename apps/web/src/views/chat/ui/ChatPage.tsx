@@ -61,7 +61,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   }, [messages]);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       <header className="flex items-center gap-3 border-b border-black/5 px-4 py-3">
         <Link href="/received" className="text-gray-400" aria-label="뒤로">
           ←

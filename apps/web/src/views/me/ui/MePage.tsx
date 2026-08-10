@@ -35,7 +35,7 @@ export function MePage() {
   }, []);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       <header className="flex justify-end px-5 pt-4">
         <Link href="/me/settings" aria-label="설정" className="p-1 text-gray-700">
           <IcGear24 className="size-6" />

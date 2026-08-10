@@ -70,7 +70,7 @@ export function PhotoUploadForm({
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       <div className="px-6 pt-16">
         <h1 className="text-xl font-bold leading-snug">
           프로필 사진을

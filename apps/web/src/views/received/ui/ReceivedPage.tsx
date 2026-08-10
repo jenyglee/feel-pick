@@ -18,7 +18,7 @@ export function ReceivedPage() {
   const [tab, setTab] = useState<Tab>('received');
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white text-gray-900">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-white text-gray-900">
       <header className="px-5 pt-6 pb-3">
         <div className="flex rounded-full bg-gray-100 p-1 text-sm font-bold">
           <button
