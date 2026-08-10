@@ -50,7 +50,7 @@ export function OtpVerifyForm({
           inputMode="numeric"
           maxLength={6}
           placeholder="6자리 인증번호"
-          className="flex-1 rounded-xl bg-gray-100 px-4 py-3.5 text-sm tracking-widest outline-none"
+          className="min-w-0 flex-1 rounded-xl bg-gray-100 px-4 py-3.5 text-sm tracking-widest outline-none"
         />
         <button
           type="button"

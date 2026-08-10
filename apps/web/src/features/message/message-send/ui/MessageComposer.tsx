@@ -27,7 +27,7 @@ export function MessageComposer({ conversationId }: { conversationId: string }) 
         }}
         placeholder="메시지를 입력하세요"
         maxLength={1000}
-        className="flex-1 rounded-full bg-gray-100 px-4 py-2.5 text-sm outline-none"
+        className="min-w-0 flex-1 rounded-full bg-gray-100 px-4 py-2.5 text-sm outline-none"
       />
       <button
         type="button"

@@ -51,7 +51,7 @@ export function PhoneLoginForm({
           inputMode="tel"
           disabled={disabled}
           placeholder="010-1234-5678"
-          className="flex-1 rounded-xl bg-gray-100 px-4 py-3.5 text-sm outline-none disabled:text-gray-400"
+          className="min-w-0 flex-1 rounded-xl bg-gray-100 px-4 py-3.5 text-sm outline-none disabled:text-gray-400"
         />
         <button
           type="button"
