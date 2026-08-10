@@ -23,6 +23,7 @@
     "turbo": "^2.9.14"
   },
   "overrides": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "react-native": "0.81.5"
   }
 }
