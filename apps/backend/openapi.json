@@ -15,6 +15,70 @@
         ]
       }
     },
+    "/auth/request-otp": {
+      "post": {
+        "operationId": "AuthController_requestOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "전화번호로 인증번호(OTP) 발급 + 문자 발송 (SMS 미설정 시 목 모드 — devCode로 응답)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "operationId": "AuthController_verifyOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOtpResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "인증번호 검증 — 기존 유저면 토큰, 신규면 가입 진행 신호",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/signup": {
       "post": {
         "operationId": "AuthController_signup",
@@ -41,22 +105,22 @@
             }
           }
         },
-        "summary": "Sign up with email + password + displayName",
+        "summary": "인증 완료 후 회원가입 (생일·닉네임·성별·약관 동의)",
         "tags": [
           "auth"
         ]
       }
     },
-    "/auth/login": {
+    "/auth/refresh": {
       "post": {
-        "operationId": "AuthController_login",
+        "operationId": "AuthController_refresh",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginDto"
+                "$ref": "#/components/schemas/RefreshDto"
               }
             }
           }
@@ -73,7 +137,32 @@
             }
           }
         },
-        "summary": "Log in with email + password",
+        "summary": "액세스 토큰 재발급 (리프레시 토큰 회전)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "폐기 완료"
+          }
+        },
+        "summary": "로그아웃 — 건네받은 리프레시 토큰만 폐기(멱등)",
         "tags": [
           "auth"
         ]
@@ -100,7 +189,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get the currently authenticated user",
+        "summary": "현재 인증된 유저 조회",
         "tags": [
           "auth"
         ]
@@ -141,7 +230,7 @@
     },
     "/choices/select": {
       "post": {
-        "description": "\"나\"(임시 유저)를 selector로 기록 → 받은픽 데이터의 출처.",
+        "description": "로그인한 \"나\"를 selector로 기록 → 받은픽 데이터의 출처.",
         "operationId": "ChoiceController_select",
         "parameters": [],
         "requestBody": {
@@ -166,6 +255,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "카드 선택 기록 후 다음 피드 반환",
         "tags": [
           "choices"
@@ -188,7 +282,158 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "현재 유저(\"나\") 조회 (프리미엄 여부 포함)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/profile": {
+      "patch": {
+        "operationId": "ViewerController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "프로필 수정 (사진·자기소개·관심사) — 보낸 필드만 반영",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/photos": {
+      "post": {
+        "operationId": "ViewerController_addPhoto",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "갱신된 \"나\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "사진첩에 사진 추가 (업로드 API가 돌려준 url을 넣는다)",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/photos/{id}/primary": {
+      "patch": {
+        "operationId": "ViewerController_setPrimaryPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "갱신된 \"나\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "그 사진을 대표(사진첩 첫 장)로 지정",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/viewer/photos/{id}": {
+      "delete": {
+        "operationId": "ViewerController_removePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "갱신된 \"나\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Viewer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "사진첩에서 사진 삭제",
         "tags": [
           "viewer"
         ]
@@ -210,6 +455,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "프리미엄 구독('가입하기') — 즉시 프리미엄 ON(임시)",
         "tags": [
           "viewer"
@@ -233,7 +483,53 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "나를 픽한 사람 목록 + 각자의 받은픽 Top3",
+        "tags": [
+          "received-picks"
+        ]
+      }
+    },
+    "/received-picks/recent": {
+      "get": {
+        "description": "비프리미엄이면 썸네일(selectorPhotoUrl)은 서버에서 가려진다.",
+        "operationId": "ReceivedPicksController_getRecent",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecentPick"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "마이페이지용 최근 받은 픽 목록 (익명 픽 포함)",
         "tags": [
           "received-picks"
         ]
@@ -258,6 +554,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "소통 목록(메시지함)",
         "tags": [
           "conversations"
@@ -288,6 +589,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "소통하기 — 대화 생성(이미 있으면 반환)",
         "tags": [
           "conversations"
@@ -322,6 +628,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "메시지 히스토리 (열면 읽음 처리)",
         "tags": [
           "conversations"
@@ -361,9 +672,60 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "메시지 전송 (REST 폴백; 정식 송신은 소켓)",
         "tags": [
           "conversations"
+        ]
+      }
+    },
+    "/uploads/photo": {
+      "post": {
+        "operationId": "UploadsController_uploadPhoto",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "프로필 사진 업로드 (multipart/form-data, 필드명 file)",
+        "tags": [
+          "uploads"
         ]
       }
     },
@@ -554,60 +916,165 @@
       }
     },
     "schemas": {
-      "SignupDto": {
+      "RequestOtpDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "phone": {
             "type": "string",
-            "example": "user@example.com",
-            "format": "email"
-          },
-          "password": {
-            "type": "string",
-            "example": "P@ssw0rd!",
-            "minLength": 8,
-            "maxLength": 72
-          },
-          "displayName": {
-            "type": "string",
-            "example": "Jane",
-            "minLength": 1,
-            "maxLength": 50
+            "example": "010-1234-5678",
+            "description": "전화번호(하이픈 허용)"
           }
         },
         "required": [
-          "email",
-          "password",
-          "displayName"
+          "phone"
+        ]
+      },
+      "RequestOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "devCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "개발 환경에서만 채워지는 인증번호(목 OTP). 운영에선 null.",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "devCode"
+        ]
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "010-1234-5678",
+            "description": "전화번호(하이픈 허용)"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "6자리 인증번호"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "VerifyOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "nullable": true,
+            "description": "기존 유저면 발급된 토큰, 신규 유저면 null(가입 진행 필요)."
+          },
+          "refreshToken": {
+            "type": "string",
+            "nullable": true,
+            "description": "기존 유저면 리프레시 토큰, 신규 유저면 null."
+          },
+          "isNewUser": {
+            "type": "boolean",
+            "description": "가입 이력이 없는 신규 유저인지 여부."
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "isNewUser"
+        ]
+      },
+      "Gender": {
+        "type": "string",
+        "enum": [
+          "MALE",
+          "FEMALE",
+          "OTHER"
+        ]
+      },
+      "SignupDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "010-1234-5678",
+            "description": "전화번호(하이픈 허용)"
+          },
+          "birthday": {
+            "type": "string",
+            "example": "2000-09-20",
+            "format": "date",
+            "description": "생년월일 (ISO 날짜)"
+          },
+          "nickname": {
+            "type": "string",
+            "example": "아니근데옥지얌",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "gender": {
+            "example": "FEMALE",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Gender"
+              }
+            ]
+          },
+          "agreeTerms": {
+            "type": "boolean",
+            "description": "이용약관 동의 (필수 — true가 아니면 가입 불가)",
+            "example": true
+          },
+          "agreePrivacy": {
+            "type": "boolean",
+            "description": "개인정보처리방침 동의 (필수 — true가 아니면 가입 불가)",
+            "example": true
+          },
+          "agreeMarketing": {
+            "type": "boolean",
+            "description": "마케팅 정보 수신 동의 (선택)",
+            "default": false
+          }
+        },
+        "required": [
+          "phone",
+          "birthday",
+          "nickname",
+          "gender",
+          "agreeTerms",
+          "agreePrivacy"
         ]
       },
       "TokenResponseDto": {
         "type": "object",
         "properties": {
           "accessToken": {
-            "type": "string"
+            "type": "string",
+            "description": "짧게 사는 액세스 토큰(JWT). 기본 15분."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "액세스 토큰 재발급용 리프레시 토큰. 재발급 시마다 새 값으로 회전한다."
           }
         },
         "required": [
-          "accessToken"
+          "accessToken",
+          "refreshToken"
         ]
       },
-      "LoginDto": {
+      "RefreshDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "refreshToken": {
             "type": "string",
-            "example": "user@example.com",
-            "format": "email"
-          },
-          "password": {
-            "type": "string",
-            "example": "P@ssw0rd!"
+            "description": "발급받은 리프레시 토큰 원문(64자 hex)",
+            "example": "a3f9c1..."
           }
         },
         "required": [
-          "email",
-          "password"
+          "refreshToken"
         ]
       },
       "User": {
@@ -617,12 +1084,28 @@
             "type": "string",
             "format": "uuid"
           },
-          "email": {
+          "phone": {
             "type": "string",
-            "format": "email"
+            "description": "전화번호(정규화된 숫자만)",
+            "example": "01012345678"
+          },
+          "birthday": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "생년월일"
           },
           "displayName": {
             "type": "string"
+          },
+          "gender": {
+            "nullable": true,
+            "description": "성별 (가입 이전 데이터는 null일 수 있음)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Gender"
+              }
+            ]
           },
           "isPremium": {
             "type": "boolean",
@@ -635,8 +1118,10 @@
         },
         "required": [
           "id",
-          "email",
+          "phone",
+          "birthday",
           "displayName",
+          "gender",
           "isPremium",
           "createdAt"
         ]
@@ -744,6 +1229,24 @@
           "selectedUserId"
         ]
       },
+      "UserPhoto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg",
+            "description": "API 서버 기준 상대 경로"
+          }
+        },
+        "required": [
+          "id",
+          "url"
+        ]
+      },
       "Viewer": {
         "type": "object",
         "properties": {
@@ -758,18 +1261,101 @@
           "photoUrl": {
             "type": "string",
             "nullable": true,
-            "example": "https://i.pravatar.cc/600?img=8"
+            "example": "https://i.pravatar.cc/600?img=8",
+            "description": "대표 사진"
           },
           "isPremium": {
             "type": "boolean",
             "description": "프리미엄 구독 여부(임시)"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "조용한 카페 좋아해요",
+            "description": "자기소개"
+          },
+          "interests": {
+            "nullable": true,
+            "example": [
+              "영화",
+              "러닝"
+            ],
+            "description": "관심사 태그",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "statusMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": "오늘은 러닝 가는 날 🏃",
+            "description": "한 줄 상태(지금 기분)"
+          },
+          "pickCount": {
+            "type": "number",
+            "example": 1824,
+            "description": "내가 받은 픽 총 개수"
+          },
+          "photos": {
+            "description": "사진첩(노출 순서대로)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserPhoto"
+            }
           }
         },
         "required": [
           "id",
           "displayName",
           "photoUrl",
-          "isPremium"
+          "isPremium",
+          "bio",
+          "interests",
+          "statusMessage",
+          "pickCount",
+          "photos"
+        ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "조용한 카페 좋아해요",
+            "description": "자기소개"
+          },
+          "statusMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": "오늘은 러닝 가는 날 🏃",
+            "description": "한 줄 상태(지금 기분). 자기소개(bio)와 별개."
+          },
+          "interests": {
+            "example": [
+              "영화",
+              "러닝",
+              "카페"
+            ],
+            "description": "관심사 태그 (최대 10개)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AddPhotoDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg"
+          }
+        },
+        "required": [
+          "url"
         ]
       },
       "Top3Item": {
@@ -849,6 +1435,36 @@
         "required": [
           "total",
           "items"
+        ]
+      },
+      "RecentPick": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "이 픽(Selection)의 ID"
+          },
+          "questionText": {
+            "type": "string",
+            "example": "관심 있는 친구",
+            "description": "나를 픽한 주제"
+          },
+          "selectorPhotoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "픽한 사람의 썸네일. 비프리미엄이면 서버에서 null로 가린다(우회 방지)."
+          },
+          "pickedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "questionText",
+          "selectorPhotoUrl",
+          "pickedAt"
         ]
       },
       "Message": {
@@ -963,6 +1579,19 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "UploadResult": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "/uploads/3f1a....jpg",
+            "description": "API 서버 기준 상대 경로"
+          }
+        },
+        "required": [
+          "url"
         ]
       }
     }

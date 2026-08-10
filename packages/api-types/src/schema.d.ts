@@ -20,6 +20,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/request-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 전화번호로 인증번호(OTP) 발급 + 문자 발송 (SMS 미설정 시 목 모드 — devCode로 응답) */
+        post: operations["AuthController_requestOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 인증번호 검증 — 기존 유저면 토큰, 신규면 가입 진행 신호 */
+        post: operations["AuthController_verifyOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/signup": {
         parameters: {
             query?: never;
@@ -29,7 +63,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign up with email + password + displayName */
+        /** 인증 완료 후 회원가입 (생일·닉네임·성별·약관 동의) */
         post: operations["AuthController_signup"];
         delete?: never;
         options?: never;
@@ -37,7 +71,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/login": {
+    "/auth/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -46,8 +80,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log in with email + password */
-        post: operations["AuthController_login"];
+        /** 액세스 토큰 재발급 (리프레시 토큰 회전) */
+        post: operations["AuthController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 로그아웃 — 건네받은 리프레시 토큰만 폐기(멱등) */
+        post: operations["AuthController_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -61,7 +112,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the currently authenticated user */
+        /** 현재 인증된 유저 조회 */
         get: operations["AuthController_me"];
         put?: never;
         post?: never;
@@ -102,7 +153,7 @@ export interface paths {
         put?: never;
         /**
          * 카드 선택 기록 후 다음 피드 반환
-         * @description "나"(임시 유저)를 selector로 기록 → 받은픽 데이터의 출처.
+         * @description 로그인한 "나"를 selector로 기록 → 받은픽 데이터의 출처.
          */
         post: operations["ChoiceController_select"];
         delete?: never;
@@ -123,6 +174,74 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/viewer/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 프로필 수정 (사진·자기소개·관심사) — 보낸 필드만 반영 */
+        patch: operations["ViewerController_updateProfile"];
+        trace?: never;
+    };
+    "/viewer/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 사진첩에 사진 추가 (업로드 API가 돌려준 url을 넣는다) */
+        post: operations["ViewerController_addPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/viewer/photos/{id}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 그 사진을 대표(사진첩 첫 장)로 지정 */
+        patch: operations["ViewerController_setPrimaryPhoto"];
+        trace?: never;
+    };
+    "/viewer/photos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 사진첩에서 사진 삭제 */
+        delete: operations["ViewerController_removePhoto"];
         options?: never;
         head?: never;
         patch?: never;
@@ -157,6 +276,26 @@ export interface paths {
          * @description 비프리미엄이면 selector 사진은 서버에서 가려진다(photoUrl=null).
          */
         get: operations["ReceivedPicksController_getReceivedPicks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/received-picks/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 마이페이지용 최근 받은 픽 목록 (익명 픽 포함)
+         * @description 비프리미엄이면 썸네일(selectorPhotoUrl)은 서버에서 가려진다.
+         */
+        get: operations["ReceivedPicksController_getRecent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -201,6 +340,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/uploads/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 프로필 사진 업로드 (multipart/form-data, 필드명 file) */
+        post: operations["UploadsController_uploadPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -222,35 +378,103 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RequestOtpDto: {
+            /**
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
+             */
+            phone: string;
+        };
+        RequestOtpResponseDto: {
+            /**
+             * @description 개발 환경에서만 채워지는 인증번호(목 OTP). 운영에선 null.
+             * @example 123456
+             */
+            devCode: string | null;
+        };
+        VerifyOtpDto: {
+            /**
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
+             */
+            phone: string;
+            /**
+             * @description 6자리 인증번호
+             * @example 123456
+             */
+            code: string;
+        };
+        VerifyOtpResponseDto: {
+            /** @description 기존 유저면 발급된 토큰, 신규 유저면 null(가입 진행 필요). */
+            accessToken: string | null;
+            /** @description 기존 유저면 리프레시 토큰, 신규 유저면 null. */
+            refreshToken: string | null;
+            /** @description 가입 이력이 없는 신규 유저인지 여부. */
+            isNewUser: boolean;
+        };
+        /** @enum {string} */
+        Gender: "MALE" | "FEMALE" | "OTHER";
         SignupDto: {
             /**
-             * Format: email
-             * @example user@example.com
+             * @description 전화번호(하이픈 허용)
+             * @example 010-1234-5678
              */
-            email: string;
-            /** @example P@ssw0rd! */
-            password: string;
-            /** @example Jane */
-            displayName: string;
+            phone: string;
+            /**
+             * Format: date
+             * @description 생년월일 (ISO 날짜)
+             * @example 2000-09-20
+             */
+            birthday: string;
+            /** @example 아니근데옥지얌 */
+            nickname: string;
+            /** @example FEMALE */
+            gender: components["schemas"]["Gender"];
+            /**
+             * @description 이용약관 동의 (필수 — true가 아니면 가입 불가)
+             * @example true
+             */
+            agreeTerms: boolean;
+            /**
+             * @description 개인정보처리방침 동의 (필수 — true가 아니면 가입 불가)
+             * @example true
+             */
+            agreePrivacy: boolean;
+            /**
+             * @description 마케팅 정보 수신 동의 (선택)
+             * @default false
+             */
+            agreeMarketing: boolean;
         };
         TokenResponseDto: {
+            /** @description 짧게 사는 액세스 토큰(JWT). 기본 15분. */
             accessToken: string;
+            /** @description 액세스 토큰 재발급용 리프레시 토큰. 재발급 시마다 새 값으로 회전한다. */
+            refreshToken: string;
         };
-        LoginDto: {
+        RefreshDto: {
             /**
-             * Format: email
-             * @example user@example.com
+             * @description 발급받은 리프레시 토큰 원문(64자 hex)
+             * @example a3f9c1...
              */
-            email: string;
-            /** @example P@ssw0rd! */
-            password: string;
+            refreshToken: string;
         };
         User: {
             /** Format: uuid */
             id: string;
-            /** Format: email */
-            email: string;
+            /**
+             * @description 전화번호(정규화된 숫자만)
+             * @example 01012345678
+             */
+            phone: string;
+            /**
+             * Format: date
+             * @description 생년월일
+             */
+            birthday: string | null;
             displayName: string;
+            /** @description 성별 (가입 이전 데이터는 null일 수 있음) */
+            gender: components["schemas"]["Gender"] | null;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
             /** Format: date-time */
@@ -302,15 +526,77 @@ export interface components {
              */
             selectedUserId: string;
         };
+        UserPhoto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description API 서버 기준 상대 경로
+             * @example /uploads/3f1a....jpg
+             */
+            url: string;
+        };
         Viewer: {
             /** Format: uuid */
             id: string;
             /** @example 나 */
             displayName: string;
-            /** @example https://i.pravatar.cc/600?img=8 */
+            /**
+             * @description 대표 사진
+             * @example https://i.pravatar.cc/600?img=8
+             */
             photoUrl: string | null;
             /** @description 프리미엄 구독 여부(임시) */
             isPremium: boolean;
+            /**
+             * @description 자기소개
+             * @example 조용한 카페 좋아해요
+             */
+            bio: string | null;
+            /**
+             * @description 관심사 태그
+             * @example [
+             *       "영화",
+             *       "러닝"
+             *     ]
+             */
+            interests: string[] | null;
+            /**
+             * @description 한 줄 상태(지금 기분)
+             * @example 오늘은 러닝 가는 날 🏃
+             */
+            statusMessage: string | null;
+            /**
+             * @description 내가 받은 픽 총 개수
+             * @example 1824
+             */
+            pickCount: number;
+            /** @description 사진첩(노출 순서대로) */
+            photos: components["schemas"]["UserPhoto"][];
+        };
+        UpdateProfileDto: {
+            /**
+             * @description 자기소개
+             * @example 조용한 카페 좋아해요
+             */
+            bio?: string | null;
+            /**
+             * @description 한 줄 상태(지금 기분). 자기소개(bio)와 별개.
+             * @example 오늘은 러닝 가는 날 🏃
+             */
+            statusMessage?: string | null;
+            /**
+             * @description 관심사 태그 (최대 10개)
+             * @example [
+             *       "영화",
+             *       "러닝",
+             *       "카페"
+             *     ]
+             */
+            interests?: string[];
+        };
+        AddPhotoDto: {
+            /** @example /uploads/3f1a....jpg */
+            url: string;
         };
         Top3Item: {
             /** @example 술 잘 먹을 것 같은 친구 */
@@ -346,6 +632,22 @@ export interface components {
              */
             total: number;
             items: components["schemas"]["ReceivedPick"][];
+        };
+        RecentPick: {
+            /**
+             * Format: uuid
+             * @description 이 픽(Selection)의 ID
+             */
+            id: string;
+            /**
+             * @description 나를 픽한 주제
+             * @example 관심 있는 친구
+             */
+            questionText: string;
+            /** @description 픽한 사람의 썸네일. 비프리미엄이면 서버에서 null로 가린다(우회 방지). */
+            selectorPhotoUrl: string | null;
+            /** Format: date-time */
+            pickedAt: string;
         };
         Message: {
             /** Format: uuid */
@@ -395,6 +697,13 @@ export interface components {
             /** @example 안녕하세요! */
             text: string;
         };
+        UploadResult: {
+            /**
+             * @description API 서버 기준 상대 경로
+             * @example /uploads/3f1a....jpg
+             */
+            url: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -421,6 +730,52 @@ export interface operations {
             };
         };
     };
+    AuthController_requestOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestOtpDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOtpResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_verifyOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyOtpDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyOtpResponseDto"];
+                };
+            };
+        };
+    };
     AuthController_signup: {
         parameters: {
             query?: never;
@@ -444,7 +799,7 @@ export interface operations {
             };
         };
     };
-    AuthController_login: {
+    AuthController_refresh: {
         parameters: {
             query?: never;
             header?: never;
@@ -453,7 +808,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LoginDto"];
+                "application/json": components["schemas"]["RefreshDto"];
             };
         };
         responses: {
@@ -464,6 +819,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenResponseDto"];
                 };
+            };
+        };
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshDto"];
+            };
+        };
+        responses: {
+            /** @description 폐기 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -549,6 +926,97 @@ export interface operations {
             };
         };
     };
+    ViewerController_updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_addPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPhotoDto"];
+            };
+        };
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_setPrimaryPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
+    ViewerController_removePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 갱신된 "나" */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Viewer"];
+                };
+            };
+        };
+    };
     ViewerController_subscribePremium: {
         parameters: {
             query?: never;
@@ -583,6 +1051,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceivedPicks"];
+                };
+            };
+        };
+    };
+    ReceivedPicksController_getRecent: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentPick"][];
                 };
             };
         };
@@ -671,6 +1160,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    UploadsController_uploadPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadResult"];
                 };
             };
         };

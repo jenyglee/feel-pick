@@ -1,9 +1,9 @@
 import type { Schemas } from '@feel-pick/api-types';
 import { io, type Socket } from 'socket.io-client';
-import { VIEWER_ID } from '@/shared/config/viewer';
+import { getTokenClient } from '@/shared/lib/token';
 
 // 실시간 채팅 소켓 래퍼(socket.io-client). 브라우저에서만 동작.
-// 인증은 임시: 핸드셰이크 auth.userId에 "나"를 싣는다(백엔드 게이트웨이가 사용).
+// 인증: 핸드셰이크 auth.token에 JWT를 싣는다(백엔드 게이트웨이가 검증).
 
 type Message = Schemas['Message'];
 
@@ -15,7 +15,7 @@ let socket: Socket | null = null;
 export function getChatSocket(): Socket {
   if (!socket) {
     socket = io(`${BASE}/chat`, {
-      auth: { userId: VIEWER_ID },
+      auth: { token: getTokenClient() },
       transports: ['websocket'],
     });
   }
@@ -34,7 +34,7 @@ export function sendChatMessage(conversationId: string, text: string): void {
 export function onChatMessage(cb: (message: Message) => void): () => void {
   const s = getChatSocket();
   const handler = (payload: { message: Message }) => cb(payload.message);
-  s.on('message:new', handler);
+  s.on('message:new', handler); // "message:new라는 이벤트가 오면, 이 handler 함수를 실행해줘"
   return () => {
     s.off('message:new', handler);
   };

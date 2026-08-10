@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import Profile from '../choice/entities/profile.entity';
+import { primaryPhotoUrl } from '../common/util/photo.util';
 import { UsersRepository } from '../users/users.repository';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import ConversationSummary from './entities/conversation-summary.entity';
@@ -17,7 +18,7 @@ import {
 type RawProfile = {
   id: string;
   displayName: string;
-  photoUrl: string | null;
+  photos: { url: string }[];
   distanceKm: number | null;
   bio: string | null;
   interests: unknown;
@@ -27,7 +28,7 @@ function toProfile(raw: RawProfile): Profile {
   return {
     id: raw.id,
     displayName: raw.displayName,
-    photoUrl: raw.photoUrl,
+    photoUrl: primaryPhotoUrl(raw.photos),
     distanceKm: raw.distanceKm,
     bio: raw.bio,
     interests: Array.isArray(raw.interests) ? (raw.interests as string[]) : [],

@@ -4,7 +4,7 @@
  * feel-pick 디자인 토큰 (Tailwind v4 @theme)
  * 컬러·타이포 토큰의 단일 소스(Single Source of Truth).
  *
- * 컬러 스케일: 9색 × 50~950. blue-500(#6382FF)에서 추출한 동일 채도/명도(S/L)
+ * 컬러 스케일: 9색 × 50~950. blue-500(#6453FF)에서 추출한 동일 채도/명도(S/L)
  * 커브를 모든 색에 적용하고 hue만 변경 (HSL 기반).
  *   ※ HSL 특성상 같은 S/L이라도 yellow/green은 blue/purple보다 밝게 보일 수 있음.
  *
@@ -19,17 +19,17 @@
 /* static: 사용 여부와 무관하게 모든 토큰을 CSS 변수로 출력 (var(--color-*) 직접 사용 가능) */
 @theme static {
   /* ── red ───────────────────────────────────────────── */
-  --color-red-50: #fff0f0;
-  --color-red-100: #ffdcdb;
-  --color-red-200: #ffbab8;
-  --color-red-300: #ff9794;
-  --color-red-400: #ff7f7a;
-  --color-red-500: #ff6863;
-  --color-red-600: #f34a44;
-  --color-red-700: #dd322c;
-  --color-red-800: #ab2a26;
-  --color-red-900: #852723;
-  --color-red-950: #5a1d1b;
+  --color-red-50: #fff1f3;
+  --color-red-100: #ffe0e4;
+  --color-red-200: #ffc5cd;
+  --color-red-300: #ff9cab;
+  --color-red-400: #ff6178;
+  --color-red-500: #fc2a47;
+  --color-red-600: #e80f2f;
+  --color-red-700: #c30a26;
+  --color-red-800: #a10e25;
+  --color-red-900: #851124;
+  --color-red-950: #49040e;
 
   /* ── orange ────────────────────────────────────────── */
   --color-orange-50: #fff7f0;
@@ -97,17 +97,17 @@
   --color-cyan-950: #1b505a;
 
   /* ── blue (기준 · primary) ─────────────────────────── */
-  --color-blue-50: #f0f3ff;
-  --color-blue-100: #dbe2ff;
-  --color-blue-200: #b8c6ff;
-  --color-blue-300: #94a9ff;
-  --color-blue-400: #7a95ff;
-  --color-blue-500: #6382ff;
-  --color-blue-600: #4467f3;
-  --color-blue-700: #2c50dd;
-  --color-blue-800: #2640ab;
-  --color-blue-900: #233785;
-  --color-blue-950: #1b285a;
+  --color-blue-50: #f5f3ff;
+  --color-blue-100: #e7e4ff;
+  --color-blue-200: #cec8ff;
+  --color-blue-300: #b2a9ff;
+  --color-blue-400: #9387ff;
+  --color-blue-500: #6453ff;
+  --color-blue-600: #5244d1;
+  --color-blue-700: #4237a8;
+  --color-blue-800: #342b85;
+  --color-blue-900: #282166;
+  --color-blue-950: #18143d;
 
   /* ── purple ────────────────────────────────────────── */
   --color-purple-50: #f8f0ff;
@@ -195,4 +195,13 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-display);
+}
+
+/* 스크롤바 숨김(휠 피커 등). 스크롤 기능은 유지. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -10,8 +10,9 @@
 ## 1. 프로젝트 개요
 
 - **feel-pick**: "픽(Pick)을 만들고 투표하는" 앱.
-- **모노레포** (npm workspaces + Turborepo): 백엔드(NestJS) + 프론트(Next.js) + 공유 타입.
+- **모노레포** (npm workspaces + Turborepo): 백엔드(NestJS) + 웹(Next.js) + 모바일(Expo 웹뷰 셸) + 공유 타입.
 - 핵심 가치: **백엔드 OpenAPI → 프론트 타입 자동 생성**. 백엔드 API가 바뀌면 프론트가 컴파일 에러로 즉시 안다.
+- **화면은 웹에만 있다.** 모바일 앱은 그 웹을 웹뷰로 띄우는 껍데기라, 기능 개발은 `apps/web`에서 한다.
 
 ---
 
@@ -41,8 +42,11 @@ feel-pick/
 │  ├─ backend/   (@feel-pick/backend) — NestJS API (:3000)
 │  │  ├─ src/  prisma/  test/  docs/  Dockerfile  prisma.config.ts
 │  │  └─ .env(.example/.test)  tsconfig*.json  nest-cli.json  eslint.config.mjs
-│  └─ web/       (@feel-pick/web)     — Next.js App Router (:3001)
-│     ├─ src/app/  src/lib/  Dockerfile  next.config.ts
+│  ├─ web/       (@feel-pick/web)     — Next.js App Router (:3001)
+│  │  ├─ src/app/  src/lib/  Dockerfile  next.config.ts
+│  └─ mobile/    (@feel-pick/mobile)  — Expo(React Native) 웹뷰 셸
+│     ├─ App.tsx  index.ts  app.json  metro.config.js
+│     └─ src/  (config/ · bridge/ · ui/)
 ├─ packages/
 │  └─ api-types/ (@feel-pick/api-types) — OpenAPI → 생성된 공유 타입
 ├─ docs/                — 모노레포·레포 전체 문서 (commands, monorepo stages)
@@ -65,8 +69,16 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 - 도메인마다 모듈 1개(`X.module.ts`)로 controller/service/repository 묶기.
 
 ### 4.2 파일·네이밍 규칙
-- 파일: **kebab-case + 역할 접미사** — `picks.controller.ts`, `picks.service.ts`, `picks.repository.ts`, `picks.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.guard.ts`, `*.strategy.ts`, `*.decorator.ts`, `*.filter.ts`.
+- 파일: **kebab-case + 역할 접미사** — `picks.controller.ts`, `picks.service.ts`, `picks.repository.ts`, `picks.module.ts`, `*.dto.ts`, `*.entity.ts`, `*.guard.ts`, `*.strategy.ts`, `*.decorator.ts`, `*.filter.ts`, `*.util.ts`.
 - 클래스: PascalCase. 도메인 폴더 단위(`src/picks/`, `src/auth/`, `src/users/`).
+- **역할별 하위폴더**: 도메인 루트에는 그 도메인의 핵심 4종(`*.controller/service/repository/module.ts`)만 평면에 둔다. 그 외 역할 파일은 **복수형 역할 폴더**로 묶는다 — `dto/`, `entities/`, `guards/`, `strategies/`, `providers/`, `util/`. (controller와 같은 평면에 util/guard 등을 흩뿌리지 말 것.)
+- **`providers/`**: 외부 서비스 어댑터(SMS 제공자 등). service는 이 어댑터만 알고, "어떤 업체를 쓰는지"는 어댑터 안에 가둔다. 예: `src/sms/providers/solapi.provider.ts`.
+
+#### util(순수 헬퍼) 배치 규칙
+- **util의 정의**: NestJS DI 없음(`@Injectable` ✕), DB 접근 없음, 부수효과 없음 — **입력→출력 순수 함수**만. DI·비즈니스 규칙·예외가 필요하면 util이 아니라 **service**다.
+- **한 도메인 전용** util → `src/<도메인>/util/<x>.util.ts` (예: `src/auth/util/phone.util.ts`).
+- **2개 이상 도메인** 공용 util → `src/common/util/<x>.util.ts`.
+- **승급 규칙**: 도메인 전용으로 시작했다가 두 번째 도메인이 쓰게 되면 그때 `common/util/`로 옮긴다 (미리 공용화 ✕ — 프론트 FSD의 "공통이 필요하면 아래로 내린다"와 같은 철학).
 
 ### 4.3 DTO vs Entity (중요)
 - **DTO** (`dto/*.dto.ts`): 클라이언트 **입력**. `class-validator` 데코레이터(`@IsString` 등) + `@ApiProperty`. **named export** (`export class CreatePickDto`).
@@ -155,6 +167,54 @@ Controller  →  Service  →  Repository  →  PrismaService(DB)
 import는 `@/*` 별칭(`@/* → ./src/*`). 예: `@/shared/api`, `@/entities/profile`, `@/features/profile/profile-select`.
 
 > 현재 전 레이어(`shared`/`entities`/`features`/`widgets`/`views`)가 FSD로 구성됨. 초이스 화면이 레퍼런스: `views/choice` → `widgets/bottom-nav` + `features/profile|question/*` + `entities/profile|choice|question` → `shared/*`.
+
+---
+
+## 5.2 모바일 (Expo 웹뷰 셸) 규칙
+
+> `apps/mobile`에서 작업 시 **`apps/mobile/AGENTS.md`도 반드시 확인** — Expo/RN은 버전마다
+> API가 바뀐다. 코드 쓰기 전 해당 SDK 버전 문서를 볼 것.
+
+**이 앱의 역할은 껍데기다.** 화면·라우팅·상태는 전부 `apps/web`에 있다.
+기능을 추가할 일이 생기면 먼저 "웹에서 못 하나?"를 묻고, 웹이 못 하는 것만 여기 넣는다.
+
+```
+apps/mobile/
+├─ App.tsx              조립만 (SafeAreaProvider + 셸)
+├─ metro.config.js      모노레포 설정 (watchFolders · nodeModulesPaths)
+└─ src/
+   ├─ config/webUrl.ts  웹뷰가 로드할 주소 결정
+   ├─ bridge/           웹 ↔ 네이티브 메시지 계약 · 주입 스크립트
+   └─ ui/               셸 컴포넌트
+```
+
+**웹뷰 주소**: 개발 중엔 `expo-constants`의 `hostUri`에서 개발 머신 IP를 뽑아 쓴다.
+`localhost`로 박으면 실기기에서 폰 자신을 가리켜 실패한다. 배포는 `EXPO_PUBLIC_WEB_URL`로 고정.
+
+**브릿지**: `src/bridge/messages.ts`와 `apps/web/src/shared/lib/native-bridge/messages.ts`는
+**같은 내용을 유지**해야 한다(지금은 수기 동기화, 늘어나면 공유 패키지로 뺀다).
+- 웹에서: `postToNative()` / `onNativeMessage()` — 브라우저에선 자동으로 no-op.
+- 메시지에 버전(`v`)을 실어 보낸다. 앱은 스토어를 거쳐 늦게 갱신되므로 버전이 어긋나는 시기가 반드시 온다. 모르는 `type`은 조용히 무시한다.
+
+**실기기에서 확인할 때 (중요)**: Next 개발 서버는 **`Host`가 localhost가 아니면
+HMR 웹소켓을 거부**한다. 그러면 앱 라우터 dev 번들이 하이드레이션을 못 해
+**화면은 그려지는데 버튼이 안 눌린다.** (`next dev -H 0.0.0.0`으로도 안 풀린다.)
+
+둘 중 하나로 우회한다.
+
+| 방법 | 명령 | 핫리로드 |
+|---|---|---|
+| USB 연결 (권장) | `adb reverse tcp:3001 tcp:3001` + `adb reverse tcp:3000 tcp:3000` 후 `EXPO_PUBLIC_WEB_URL=http://localhost:3001`로 실행 | ✅ |
+| 와이파이 | 웹을 프로덕션으로: `npm run build -w @feel-pick/web && npm run start -w @feel-pick/web` | ✕ |
+
+`adb reverse`는 폰의 localhost를 맥으로 연결해 Host가 localhost가 되게 만든다.
+
+**API 주소**: 브라우저 쪽 베이스 URL은 `shared/api/baseUrl`이 **페이지를 내려준
+호스트**에서 유도한다. localhost로 고정하면 폰에서 그 localhost가 폰 자신을
+가리켜 API가 전부 실패한다.
+
+**하지 말 것**: 웹뷰에서 될 일을 네이티브 화면으로 만들기(중복 유지보수), 세션을
+네이티브에 따로 저장하기(쿠키는 웹뷰가 관리 — `sharedCookiesEnabled`).
 
 ---
 

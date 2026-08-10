@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import Profile from '../choice/entities/profile.entity';
+import { primaryPhotoUrl } from '../common/util/photo.util';
 import User from '../users/entities/user.entity';
+import RecentPick from './entities/recent-pick.entity';
 import ReceivedPick from './entities/received-pick.entity';
 import ReceivedPicks from './entities/received-picks.entity';
 import Top3Item from './entities/top3-item.entity';
@@ -8,10 +10,13 @@ import { ReceivedPicksRepository } from './received-picks.repository';
 
 const TOP_N = 3;
 
+/** 마이페이지 "최근 받은 픽" 기본 노출 개수. */
+export const RECENT_LIMIT = 10;
+
 type SelectorProfile = {
   id: string;
   displayName: string;
-  photoUrl: string | null;
+  photos: { url: string }[];
   distanceKm: number | null;
   bio: string | null;
   interests: unknown;
@@ -21,7 +26,7 @@ function toProfile(raw: SelectorProfile): Profile {
   return {
     id: raw.id,
     displayName: raw.displayName,
-    photoUrl: raw.photoUrl,
+    photoUrl: primaryPhotoUrl(raw.photos),
     distanceKm: raw.distanceKm,
     bio: raw.bio,
     interests: Array.isArray(raw.interests) ? (raw.interests as string[]) : [],
@@ -33,6 +38,22 @@ export class ReceivedPicksService {
   constructor(private readonly repo: ReceivedPicksRepository) {}
 
   /**
+   * 마이페이지 "최근 받은 픽" 목록.
+   * 받은픽 탭과 동일하게 비프리미엄에게는 썸네일을 서버에서 가린다.
+   */
+  async getRecent(viewer: User, limit: number): Promise<RecentPick[]> {
+    const rows = await this.repo.findRecentReceived(viewer.id, limit);
+    return rows.map((r) => ({
+      id: r.id,
+      questionText: r.question.text,
+      selectorPhotoUrl: viewer.isPremium
+        ? primaryPhotoUrl(r.selector?.photos)
+        : null,
+      pickedAt: r.createdAt,
+    }));
+  }
+
+  /**
    * 받은픽 탭 데이터.
    * - total: 내가 받은 총 픽 수
    * - items: 나를 픽한 사람(식별된 selector) 목록 + 각자의 받은픽 Top3
@@ -40,8 +61,8 @@ export class ReceivedPicksService {
    */
   async getReceivedPicks(viewer: User): Promise<ReceivedPicks> {
     const [rows, total] = await Promise.all([
-      this.repo.findReceivedFromSelectors(viewer.id),
-      this.repo.countReceived(viewer.id),
+      this.repo.findReceivedFromSelectors(viewer.id), // 나를 픽한 selection들(식별된 사람만), 최신순
+      this.repo.countReceived(viewer.id), // 내가 받은 총 픽 수(익명 포함)
     ]);
 
     // selector별 distinct — 최신순이므로 처음 본 것(가장 최근 픽)을 대표로.

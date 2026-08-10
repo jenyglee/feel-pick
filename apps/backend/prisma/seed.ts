@@ -1,8 +1,12 @@
 import 'dotenv/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
-import { DEV_USER_ID } from '../src/common/dev-user/dev-user.constant';
+
+// 데모용 "나" 고정 id. 이 유저의 phone으로 OTP 로그인해 데모 데이터를 볼 수 있다.
+const ME_ID = '00000000-0000-4000-8000-000000000001';
+const ME_PHONE = '01000000000';
+// 프로필 유저 phone: '010' + (10000000 + idx) → 11자리 고정 목 번호.
+const phoneFor = (idx: number): string => `010${10000000 + idx}`;
 
 // PrismaService와 동일한 어댑터 구성 (standalone 스크립트용).
 function createAdapter(databaseUrl: string): PrismaMariaDb {
@@ -98,9 +102,18 @@ const USERS: SeedUser[] = [
   { handle: 'yujin', displayName: '유진', img: 36, bio: '베이킹 클래스 운영해요 🧁', distanceKm: 5, interests: ['베이킹', '플라워', '브런치'] },
 ];
 
-async function main(): Promise<void> {
-  const passwordHash = await bcrypt.hash('seed-password-1234', 10);
+/**
+ * 사진첩을 시드한다. 대표 사진은 따로 없고 사진첩 첫 장이 그 역할을 한다.
+ * 재실행해도 중복되지 않도록 기존 사진을 지우고 다시 넣는다.
+ */
+async function seedPhotos(userId: string, img: number): Promise<void> {
+  await prisma.userPhoto.deleteMany({ where: { userId } });
+  await prisma.userPhoto.create({
+    data: { userId, url: `https://i.pravatar.cc/600?img=${img}`, sortOrder: 0 },
+  });
+}
 
+async function main(): Promise<void> {
   // 질문: 비어있을 때만 시드 (재실행 시 중복 방지).
   if ((await prisma.question.count()) === 0) {
     await prisma.question.createMany({
@@ -118,53 +131,51 @@ async function main(): Promise<void> {
 
   // "나": 고정 id로 upsert.
   await prisma.user.upsert({
-    where: { id: DEV_USER_ID },
+    where: { id: ME_ID },
     update: {
       displayName: ME.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
       bio: ME.bio,
       distanceKm: ME.distanceKm,
       interests: ME.interests,
       isPremium: false, // 재시드 시 데모 시작 상태(비프리미엄)로 리셋
     },
     create: {
-      id: DEV_USER_ID,
-      email: 'me@seed.feelpick.dev',
-      passwordHash,
+      id: ME_ID,
+      phone: ME_PHONE,
       displayName: ME.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${ME.img}`,
       bio: ME.bio,
       distanceKm: ME.distanceKm,
       interests: ME.interests,
     },
   });
+  await seedPhotos(ME_ID, ME.img);
 
-  // 프로필 유저: email 기준 upsert (재실행 안전).
-  for (const u of USERS) {
-    const email = `${u.handle}@seed.feelpick.dev`;
+  // 프로필 유저: phone 기준 upsert (재실행 안전).
+  for (let i = 0; i < USERS.length; i++) {
+    const u = USERS[i];
+    const phone = phoneFor(i);
     const profile = {
       displayName: u.displayName,
-      photoUrl: `https://i.pravatar.cc/600?img=${u.img}`,
       bio: u.bio,
       distanceKm: u.distanceKm,
       interests: u.interests,
     };
-    await prisma.user.upsert({
-      where: { email },
+    const saved = await prisma.user.upsert({
+      where: { phone },
       update: profile,
-      create: { email, passwordHash, ...profile },
+      create: { phone, ...profile },
+      select: { id: true },
     });
+    await seedPhotos(saved.id, u.img);
   }
 
   const profileUsers = await prisma.user.findMany({
-    where: { email: { in: USERS.map((u) => `${u.handle}@seed.feelpick.dev`) } },
-    select: { id: true, email: true },
+    where: { phone: { in: USERS.map((_, i) => phoneFor(i)) } },
+    select: { id: true, phone: true },
   });
   // USERS 배열 순서대로 정렬 (findMany는 순서 보장 X) → 대화 시드의 partnerIdx가 맞아떨어지게.
-  const idByEmail = new Map(profileUsers.map((u) => [u.email, u.id]));
-  const profileIds = USERS.map(
-    (u) => idByEmail.get(`${u.handle}@seed.feelpick.dev`) as string,
-  );
+  const idByPhone = new Map(profileUsers.map((u) => [u.phone, u.id]));
+  const profileIds = USERS.map((_, i) => idByPhone.get(phoneFor(i)) as string);
 
   // 관계형 목 데이터(픽 그래프·대화)는 매번 초기화 후 재생성 → 재실행 안정.
   await prisma.message.deleteMany();
@@ -183,7 +194,7 @@ async function main(): Promise<void> {
   for (const selectorUserId of profileIds) {
     const n = 3 + Math.floor(rng() * 4); // 3~6개 질문
     for (const questionId of pick(questionIds, n, rng)) {
-      selections.push({ questionId, selectedUserId: DEV_USER_ID, selectorUserId });
+      selections.push({ questionId, selectedUserId: ME_ID, selectorUserId });
     }
   }
 
@@ -243,12 +254,12 @@ async function main(): Promise<void> {
     const partnerId = profileIds[c.partnerIdx];
     const conv = await prisma.conversation.create({
       data: {
-        ...pair(DEV_USER_ID, partnerId),
+        ...pair(ME_ID, partnerId),
         questionId: questionIds[c.questionIdx],
         createdAt: new Date(now - 200 * 60_000),
         messages: {
           create: c.messages.map((m) => ({
-            senderId: m.fromMe ? DEV_USER_ID : partnerId,
+            senderId: m.fromMe ? ME_ID : partnerId,
             text: m.text,
             createdAt: new Date(now - m.minutesAgo * 60_000),
             readAt: m.read ? new Date(now - m.minutesAgo * 60_000) : null,
@@ -262,7 +273,7 @@ async function main(): Promise<void> {
   const [q, n, s, conv, msg] = await Promise.all([
     prisma.question.count(),
     prisma.user.count(),
-    prisma.selection.count({ where: { selectedUserId: DEV_USER_ID } }),
+    prisma.selection.count({ where: { selectedUserId: ME_ID } }),
     prisma.conversation.count(),
     prisma.message.count(),
   ]);

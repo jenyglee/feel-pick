@@ -8,12 +8,13 @@ const ME = '22222222-2222-4222-8222-222222222222';
 describe('소통(대화) REST (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let tokenFor: (id: string) => string;
   let aId: string;
   let bId: string;
   let questionId: string;
 
   beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
+    ({ app, prisma, tokenFor } = await createTestApp());
   });
 
   afterAll(async () => {
@@ -23,27 +24,20 @@ describe('소통(대화) REST (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
     await prisma.user.create({
-      data: {
-        id: ME,
-        email: 'me@test.dev',
-        passwordHash: 'x',
-        displayName: '나',
-      },
+      data: { id: ME, phone: '01020000000', displayName: '나' },
     });
     const a = await prisma.user.create({
       data: {
-        email: 'a@test.dev',
-        passwordHash: 'x',
+        phone: '01020000001',
         displayName: 'A',
-        photoUrl: 'pa',
+        photos: { create: { url: 'pa', sortOrder: 0 } },
       },
     });
     const b = await prisma.user.create({
       data: {
-        email: 'b@test.dev',
-        passwordHash: 'x',
+        phone: '01020000002',
         displayName: 'B',
-        photoUrl: 'pb',
+        photos: { create: { url: 'pb', sortOrder: 0 } },
       },
     });
     aId = a.id;
@@ -55,7 +49,7 @@ describe('소통(대화) REST (e2e)', () => {
   function create(target: string, userId = ME) {
     return request(app.getHttpServer())
       .post('/conversations')
-      .set('x-user-id', userId)
+      .set('Authorization', `Bearer ${tokenFor(userId)}`)
       .send({ targetUserId: target, questionId });
   }
 
@@ -82,13 +76,13 @@ describe('소통(대화) REST (e2e)', () => {
     const conv = await create(aId).expect(201);
     await request(app.getHttpServer())
       .post(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .send({ text: '안녕하세요!' })
       .expect(201);
 
     const msgs = await request(app.getHttpServer())
       .get(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .expect(200);
     expect(msgs.body).toHaveLength(1);
     expect(msgs.body[0].text).toBe('안녕하세요!');
@@ -100,25 +94,25 @@ describe('소통(대화) REST (e2e)', () => {
     // A가 나에게 보냄
     await request(app.getHttpServer())
       .post(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', aId)
+      .set('Authorization', `Bearer ${tokenFor(aId)}`)
       .send({ text: 'A의 메시지' })
       .expect(201);
 
     const before = await request(app.getHttpServer())
       .get('/conversations')
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .expect(200);
     expect(before.body[0].unreadCount).toBe(1);
 
     // 열면 읽음 처리
     await request(app.getHttpServer())
       .get(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .expect(200);
 
     const after = await request(app.getHttpServer())
       .get('/conversations')
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .expect(200);
     expect(after.body[0].unreadCount).toBe(0);
   });
@@ -128,7 +122,7 @@ describe('소통(대화) REST (e2e)', () => {
     const conv = await create(bId, aId).expect(201);
     await request(app.getHttpServer())
       .get(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .expect(403);
   });
 
@@ -136,7 +130,7 @@ describe('소통(대화) REST (e2e)', () => {
     const conv = await create(aId).expect(201);
     await request(app.getHttpServer())
       .post(`/conversations/${conv.body.id}/messages`)
-      .set('x-user-id', ME)
+      .set('Authorization', `Bearer ${tokenFor(ME)}`)
       .send({ text: '' })
       .expect(400);
   });

@@ -47,8 +47,16 @@ services:
       DATABASE_URL: 'mysql://root:root@mysql:3306/feelpick'
       JWT_SECRET: 'change-me-in-production-use-openssl-rand-hex-32'
       JWT_EXPIRES_IN: '1d'
+      # SMS(Solapi). 호스트 셸/.env에 값이 있으면 넘기고, 없으면 빈 값 → 목(mock) 모드.
+      SOLAPI_API_KEY: '${SOLAPI_API_KEY:-}'
+      SOLAPI_API_SECRET: '${SOLAPI_API_SECRET:-}'
+      SOLAPI_SENDER: '${SOLAPI_SENDER:-}'
     ports:
       - '3000:3000'
+    volumes:
+      # 업로드된 프로필 사진. 컨테이너를 지워도 남도록 볼륨에 보관.
+      # (앱의 WORKDIR가 /app/apps/backend라 uploads도 그 아래에 생긴다)
+      - feelpick-uploads:/app/apps/backend/uploads
     # 앱 시작 전 마이그레이션 적용 (prisma CLI가 운영 의존성에 포함됨).
     command: sh -c "npx prisma migrate deploy && node dist/src/main.js"
 
@@ -72,3 +80,4 @@ services:
 
 volumes:
   feelpick-mysql-data:
+  feelpick-uploads:

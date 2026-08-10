@@ -8,13 +8,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { DevUserGuard } from '../common/dev-user/dev-user.guard';
 import User from '../users/entities/user.entity';
 import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -24,7 +25,8 @@ import Message from './entities/message.entity';
 
 @ApiTags('conversations')
 @Controller('conversations')
-@UseGuards(DevUserGuard)
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ConversationsController {
   constructor(private readonly service: ConversationsService) {}
 

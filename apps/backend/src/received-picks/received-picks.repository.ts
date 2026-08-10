@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { primaryPhotoSelect } from '../common/util/photo.util';
 import { PrismaService } from '../prisma/prisma.service';
 
-// selector 카드에 노출할 프로필 필드 (passwordHash/email 제외).
+// selector 카드에 노출할 프로필 필드 (민감 필드(phone 등) 제외).
+// 사진은 사진첩 첫 장을 대표로 쓴다.
 const profileSelect = {
   id: true,
   displayName: true,
-  photoUrl: true,
   distanceKm: true,
   bio: true,
   interests: true,
+  photos: primaryPhotoSelect,
 } as const;
 
 @Injectable()
@@ -47,6 +49,24 @@ export class ReceivedPicksRepository {
       by: ['selectedUserId', 'questionId'],
       where: { selectedUserId: { in: userIds } },
       _count: { _all: true },
+    });
+  }
+
+  /**
+   * 마이페이지용 최근 받은 픽 N건. 익명(selector 없음) 픽도 포함한다 —
+   * "몇 개 받았는지"를 보여주는 목록이라 사람이 식별되지 않아도 의미가 있다.
+   */
+  findRecentReceived(meId: string, limit: number) {
+    return this.prisma.selection.findMany({
+      where: { selectedUserId: meId },
+      select: {
+        id: true,
+        createdAt: true,
+        question: { select: { text: true } },
+        selector: { select: { photos: primaryPhotoSelect } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
     });
   }
 

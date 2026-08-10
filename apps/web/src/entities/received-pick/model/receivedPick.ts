@@ -6,3 +6,5 @@ export type ReceivedPicks = Schemas['ReceivedPicks'];
 export type ReceivedPick = Schemas['ReceivedPick'];
 // 받은픽 Top3 한 줄(주제 + 표수).
 export type Top3Item = Schemas['Top3Item'];
+// 마이페이지 "최근 받은 픽" 한 줄(주제 + 썸네일 + 시각).
+export type RecentPick = Schemas['RecentPick'];

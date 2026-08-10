@@ -29,6 +29,8 @@
 |---|---|
 | [받은 픽 기능 전략](received-picks-plan.md) | 소통 메시지함 · 1:1 실시간 채팅(Socket.IO) · 받은픽 리스트 · 프리미엄 게이팅 · 프로필 모달 — 데이터 모델/API/FSD 구조/Phase 플랜 (사전 설계) |
 | [받은 픽 기능 구현 정리](received-picks-implementation.md) | 위 계획의 **실제 구현 기록**(P-A~P-G). 프론트 관점 API 계약·FSD 구조·실시간 채팅 동작·디버깅 메모 |
+| [전화번호 로그인 + 온보딩 구현 정리](phone-auth-implementation.md) | 전화번호 OTP 인증 · JWT 쿠키 · 회원가입 온보딩 위저드(약관·생일·성별·닉네임·사진·관심사) |
+| [문자(SMS) 인증번호 발송 구현 정리](sms-implementation.md) | Solapi 실 발송 연동 · 목(mock) 모드 폴백 · HMAC 서명 · 어댑터 구조 |
 
 ## 🛠 백엔드 학습 노트 (`apps/backend/docs/`)
 

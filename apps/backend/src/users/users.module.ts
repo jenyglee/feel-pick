@@ -3,7 +3,7 @@ import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
 
 // 전역: UsersRepository를 어디서나 주입 가능하게 한다.
-// (DevUserGuard 등 도메인 가드가 컨트롤러 모듈 컨텍스트에서 인스턴스화될 때 필요)
+// (JwtStrategy·ChatGateway 등 여러 모듈에서 현재 유저 조회에 쓰인다)
 @Global()
 @Module({
   providers: [UsersService, UsersRepository],

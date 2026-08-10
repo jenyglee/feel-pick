@@ -8,9 +8,12 @@ const ME = '11111111-1111-4111-8111-111111111111';
 describe('받은픽 / 프리미엄 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let auth: string;
 
   beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
+    let tokenFor: (id: string) => string;
+    ({ app, prisma, tokenFor } = await createTestApp());
+    auth = `Bearer ${tokenFor(ME)}`;
   });
 
   afterAll(async () => {
@@ -20,30 +23,26 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
 
-    const passwordHash = 'x';
     await prisma.user.create({
       data: {
         id: ME,
-        email: 'me@test.dev',
-        passwordHash,
+        phone: '01011111111',
         displayName: '나',
         isPremium: false,
       },
     });
     const a = await prisma.user.create({
       data: {
-        email: 'a@test.dev',
-        passwordHash,
+        phone: '01022222222',
         displayName: 'A',
-        photoUrl: 'photo-a',
+        photos: { create: { url: 'photo-a', sortOrder: 0 } },
       },
     });
     const b = await prisma.user.create({
       data: {
-        email: 'b@test.dev',
-        passwordHash,
+        phone: '01033333333',
         displayName: 'B',
-        photoUrl: 'photo-b',
+        photos: { create: { url: 'photo-b', sortOrder: 0 } },
       },
     });
     const q1 = await prisma.question.create({ data: { text: 'Q1' } });
@@ -66,7 +65,7 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('비프리미엄: 나를 픽한 사람 목록 + Top3, 사진은 가려진다', async () => {
     const res = await request(app.getHttpServer())
       .get('/received-picks')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     expect(res.body.total).toBe(3);
@@ -86,13 +85,13 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('프리미엄 구독 후엔 사진이 공개된다', async () => {
     const me = await request(app.getHttpServer())
       .post('/viewer/premium')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(201);
     expect(me.body.isPremium).toBe(true);
 
     const res = await request(app.getHttpServer())
       .get('/received-picks')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     const itemA = res.body.items.find(
@@ -105,10 +104,77 @@ describe('받은픽 / 프리미엄 (e2e)', () => {
   it('GET /viewer 는 현재 유저와 프리미엄 여부를 반환한다', async () => {
     const res = await request(app.getHttpServer())
       .get('/viewer')
-      .set('x-user-id', ME)
+      .set('Authorization', auth)
       .expect(200);
 
     expect(res.body).toMatchObject({ displayName: '나', isPremium: false });
     expect(res.body.passwordHash).toBeUndefined();
+  });
+
+  it('GET /viewer 의 pickCount는 내가 받은 총 픽 수와 같다', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/viewer')
+      .set('Authorization', auth)
+      .expect(200);
+
+    // 시드: A가 q1·q2, B가 q1 → 나를 픽한 건 총 3건
+    expect(res.body.pickCount).toBe(3);
+  });
+
+  describe('GET /received-picks/recent (마이페이지)', () => {
+    it('최신순으로 질문 텍스트와 함께 내려준다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+
+      expect(res.body).toHaveLength(3);
+      expect(res.body[0]).toMatchObject({ questionText: expect.any(String) });
+      const times = res.body.map((r: { pickedAt: string }) =>
+        new Date(r.pickedAt).getTime(),
+      );
+      expect([...times].sort((a: number, b: number) => b - a)).toEqual(times);
+    });
+
+    it('limit으로 개수를 줄일 수 있다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent?limit=2')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(res.body).toHaveLength(2);
+    });
+
+    it('비프리미엄에게는 썸네일이 가려진다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+      for (const item of res.body) {
+        expect(item.selectorPhotoUrl).toBeNull();
+      }
+    });
+
+    it('프리미엄이면 썸네일이 공개된다', async () => {
+      await request(app.getHttpServer())
+        .post('/viewer/premium')
+        .set('Authorization', auth)
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(
+        res.body.some(
+          (i: { selectorPhotoUrl: string | null }) => i.selectorPhotoUrl,
+        ),
+      ).toBe(true);
+    });
+
+    it('토큰이 없으면 401', async () => {
+      await request(app.getHttpServer())
+        .get('/received-picks/recent')
+        .expect(401);
+    });
   });
 });

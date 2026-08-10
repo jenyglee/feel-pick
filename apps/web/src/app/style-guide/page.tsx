@@ -41,7 +41,7 @@ const typography = [
 
 export default function StyleGuidePage() {
   return (
-    <main className="bg-background text-foreground font-display min-h-screen px-6 py-12 md:px-12">
+    <main className="bg-background text-foreground font-display min-h-dvh px-6 py-12 md:px-12">
       <div className="mx-auto max-w-4xl space-y-16">
         <header className="space-y-2">
           <h1 className="text-title1">feel-pick 스타일 가이드</h1>
