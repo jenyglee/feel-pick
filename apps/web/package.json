@@ -7,7 +7,8 @@
     "icons": "svgr --config-file svgr.config.cjs --out-dir src/shared/ui/icons public/icons",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:lan": "node scripts/lan-dev-proxy.mjs"
   },
   "dependencies": {
     "@feel-pick/api-types": "*",
