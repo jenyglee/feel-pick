@@ -29,7 +29,10 @@ export function WebViewShell() {
   const insets = useSafeAreaInsets();
 
   const [uri] = useState(resolveWebUrl);
-  const [loading, setLoading] = useState(true);
+  // 첫 로드가 끝났는지. 전체 화면 스피너는 이때까지만 띄운다.
+  // 이후 웹 안에서의 화면 전환은 SPA 이동이라 다시 로딩을 걸면 안 된다 —
+  // onLoadEnd가 안 오는 전환에서 스피너가 영영 남아 화면을 덮어버린다.
+  const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   // 재시도할 때 WebView를 통째로 새로 마운트하기 위한 키.
@@ -57,7 +60,7 @@ export function WebViewShell() {
 
   const retry = useCallback(() => {
     setFailed(false);
-    setLoading(true);
+    setReady(false);
     setAttempt((n) => n + 1);
   }, []);
 
@@ -104,10 +107,19 @@ export function WebViewShell() {
         allowsInlineMediaPlayback
         // 당겨서 새로고침(iOS). 안드로이드는 아래 onError 재시도로 대응.
         pullToRefreshEnabled
-        onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
+        // 끝까지 당겼을 때 웹뷰 뒤의 기본 배경(검정)이 비치지 않게 한다.
+        // - 안드로이드: 늘어나는 오버스크롤 자체를 끈다
+        // - iOS: 바운스 영역에 흰 배경을 깐다
+        overScrollMode="never"
+        containerStyle={styles.fill}
+        contentInsetAdjustmentBehavior="never"
+        onLoadEnd={() => setReady(true)}
+        // onLoadEnd가 안 오는 경우를 대비한 보조 신호.
+        onLoadProgress={({ nativeEvent }) => {
+          if (nativeEvent.progress >= 1) setReady(true);
+        }}
         onError={() => {
-          setLoading(false);
+          setReady(true);
           setFailed(true);
         }}
         onHttpError={({ nativeEvent }) => {
@@ -123,7 +135,7 @@ export function WebViewShell() {
           if (!message) return;
           switch (message.type) {
             case 'web:ready':
-              setLoading(false);
+              setReady(true);
               break;
             case 'web:log':
               console.log('[web]', message.message);
@@ -132,7 +144,7 @@ export function WebViewShell() {
         }}
       />
 
-      {loading && (
+      {!ready && (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" />
         </View>
